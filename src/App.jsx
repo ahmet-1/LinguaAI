@@ -1,1 +1,938 @@
 
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="theme-color" content="#07070f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="LinguaAI"/>
+<meta name="description" content="AI Hoca ile 10 Dil Öğren - 5 Gün Ücretsiz"/>
+<title>LinguaAI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#07070f;color:#fff;font-family:'Segoe UI',sans-serif;min-height:100vh}
+input,textarea,button{font-family:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#1a1a2a}
+::-webkit-scrollbar-thumb{background:#4caf50;border-radius:2px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes float0{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes float1{0%,100%{transform:translateY(-5px)}50%{transform:translateY(7px)}}
+@keyframes float2{0%,100%{transform:translateY(4px)}50%{transform:translateY(-8px)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes dotB{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect} = React;
+
+const LANGUAGES=[
+  {id:"quran",  name:"Kur'an-ı Kerim",native:"القرآن الكريم",flag:"🕌",color:"#1a5c35",accent:"#f0c040",desc:"Tecvid, Makam ve Hıfz",        modules:["Tecvid","Makam","Hıfz","Sure Mealleri"]},
+  {id:"arabic", name:"Arapça",        native:"العربية",      flag:"🇪🇬",color:"#7a0000",accent:"#ffd700",desc:"Nahiv, Sarf ve Konuşma",       modules:["Nahiv","Sarf","Konuşma","Okuma-Yazma"]},
+  {id:"english",name:"İngilizce",     native:"English",      flag:"🇬🇧",color:"#012169",accent:"#cf142b",desc:"British & American English",   modules:["Grammar","Speaking","Vocabulary","IELTS"]},
+  {id:"german", name:"Almanca",       native:"Deutsch",      flag:"🇩🇪",color:"#1a1a1a",accent:"#ffd600",desc:"A1'den C2'ye Almanca",          modules:["Grammatik","Sprechen","Vokabeln","TestDaF"]},
+  {id:"italian",name:"İtalyanca",     native:"Italiano",     flag:"🇮🇹",color:"#006400",accent:"#ff8c00",desc:"La bella lingua italiana",     modules:["Grammatica","Conversazione","Cultura","CILS"]},
+  {id:"french", name:"Fransızca",     native:"Français",     flag:"🇫🇷",color:"#002395",accent:"#ed2939",desc:"La langue de l'amour",        modules:["Grammaire","Conversation","Culture","DELF"]},
+  {id:"chinese",name:"Çince",         native:"中文",          flag:"🇨🇳",color:"#8b0000",accent:"#ffde00",desc:"Mandarin & HSK",               modules:["Pinyin","Hanzi","Konuşma","HSK"]},
+  {id:"turkish",name:"Türkçe",        native:"Türkçe",       flag:"🇹🇷",color:"#9b0000",accent:"#f0f0f0",desc:"Ana dil & Yabancılara Türkçe",modules:["Dilbilgisi","Konuşma","Yazma","TÖMER"]},
+  {id:"russian",name:"Rusça",         native:"Русский",      flag:"🇷🇺",color:"#003580",accent:"#e8112d",desc:"Kiril alfabesi & Konuşma",     modules:["Kiril","Gramer","Konuşma","TORFL"]},
+  {id:"spanish",name:"İspanyolca",    native:"Español",      flag:"🇪🇸",color:"#9b1c1c",accent:"#fbbf24",desc:"Dünyanın en yaygın dili",     modules:["Gramática","Conversación","Cultura","DELE"]},
+];
+
+const TEACHERS={
+  quran:[
+    {id:"q1",name:"Şeyh Ahmed Al-Ghamdi",  origin:"Mekke, S. Arabistan",  gender:"male",  specialty:"Tecvid & Hıfz Uzmanı",    rating:4.9,students:1240,kids:false},
+    {id:"q2",name:"Şeyh Omar Al-Fadil",    origin:"Medine, S. Arabistan", gender:"male",  specialty:"Makam & Kıraat Uzmanı",   rating:4.8,students:980, kids:false},
+    {id:"q3",name:"Üst. Meryem Al-Husseini",origin:"Kahire, Mısır",       gender:"female",specialty:"Sure Mealleri & Tefsir",  rating:4.9,students:1560,kids:false},
+    {id:"q4",name:"Üst. Fatıma Al-Zahrawi",origin:"Güney Sina, Mısır",    gender:"female",specialty:"Tecvid & Kıraat Uzmanı",  rating:4.7,students:870, kids:false},
+    {id:"q5",name:"Öğrt. Yusuf Al-Nuri",   origin:"Kahire, Mısır",        gender:"male",  specialty:"Çocuklara Kur'an & Hıfz", rating:4.9,students:640, kids:true},
+    {id:"q6",name:"Öğrt. Zeynep Al-Safa",  origin:"Medine, S. Arabistan", gender:"female",specialty:"Çocuklara Tecvid",        rating:4.8,students:510, kids:true},
+  ],
+  arabic:[
+    {id:"a1",name:"Dr. Khalid Al-Mansouri",origin:"Kahire, Mısır",        gender:"male",  specialty:"Nahiv & Sarf Uzmanı",     rating:4.9,students:2100,kids:false},
+    {id:"a2",name:"Prof. Yusuf Al-Azhari", origin:"Kahire, Mısır",        gender:"male",  specialty:"Fesahat & Belağat",       rating:4.8,students:1450,kids:false},
+    {id:"a3",name:"Dr. Nour Al-Rashidi",   origin:"Bağdat, Irak",         gender:"female",specialty:"Modern Arapça & Konuşma", rating:4.9,students:1890,kids:false},
+    {id:"a4",name:"Üst. Layla Al-Baghdadi",origin:"Amman, Ürdün",         gender:"female",specialty:"Nahiv & Okuma-Yazma",     rating:4.7,students:1120,kids:false},
+    {id:"a5",name:"Öğrt. Samir Al-Faruq", origin:"Kahire, Mısır",        gender:"male",  specialty:"Çocuklara Temel Arapça",  rating:4.9,students:720, kids:true},
+    {id:"a6",name:"Öğrt. Hana Al-Zubi",   origin:"Amman, Ürdün",         gender:"female",specialty:"Çocuklara Arapça & Oyun", rating:4.8,students:590, kids:true},
+  ],
+  english:[
+    {id:"e1",name:"James Harrison",        origin:"Londra, İngiltere",    gender:"male",  specialty:"British English & IELTS",    rating:4.9,students:3200,kids:false},
+    {id:"e2",name:"Dr. William Clarke",    origin:"Oxford, İngiltere",    gender:"male",  specialty:"Academic English & Writing", rating:4.8,students:2100,kids:false},
+    {id:"e3",name:"Sarah Mitchell",        origin:"New York, ABD",        gender:"female",specialty:"American English & TOEFL",   rating:4.9,students:2800,kids:false},
+    {id:"e4",name:"Emma Thompson",         origin:"Manchester, İngiltere",gender:"female",specialty:"Conversation & Pronunciation",rating:4.8,students:1950,kids:false},
+    {id:"e5",name:"Tom Bradley",           origin:"Bristol, İngiltere",   gender:"male",  specialty:"Çocuklara Eğlenceli İngilizce",rating:4.9,students:880,kids:true},
+    {id:"e6",name:"Lucy Williams",         origin:"Edinburgh, İskoçya",   gender:"female",specialty:"Çocuk İngilizcesi & Şarkılar",rating:4.8,students:740,kids:true},
+  ],
+  german:[
+    {id:"g1",name:"Prof. Klaus Weber",     origin:"Berlin, Almanya",      gender:"male",  specialty:"Grammatik & TestDaF",         rating:4.9,students:1800,kids:false},
+    {id:"g2",name:"Dr. Hans Mueller",      origin:"Münih, Almanya",       gender:"male",  specialty:"İş Almancası & C2",           rating:4.7,students:1200,kids:false},
+    {id:"g3",name:"Anna Schneider",        origin:"Hamburg, Almanya",     gender:"female",specialty:"Konuşma & Telaffuz",          rating:4.9,students:2100,kids:false},
+    {id:"g4",name:"Dr. Maria Fischer",     origin:"Viyana, Avusturya",    gender:"female",specialty:"A1-B2 & Günlük Almanca",      rating:4.8,students:1600,kids:false},
+    {id:"g5",name:"Felix Braun",           origin:"Köln, Almanya",        gender:"male",  specialty:"Çocuklara Eğlenceli Almanca", rating:4.9,students:650, kids:true},
+    {id:"g6",name:"Lena Hoffmann",         origin:"Stuttgart, Almanya",   gender:"female",specialty:"Çocuk Almancası & Masallar",  rating:4.8,students:520, kids:true},
+  ],
+  italian:[
+    {id:"i1",name:"Marco Rossi",           origin:"Roma, İtalya",         gender:"male",  specialty:"Conversazione & Cultura",     rating:4.8,students:1400,kids:false},
+    {id:"i2",name:"Prof. Antonio Bianchi", origin:"Floransa, İtalya",     gender:"male",  specialty:"Grammatica & CILS",           rating:4.9,students:1100,kids:false},
+    {id:"i3",name:"Sofia De Luca",         origin:"Milano, İtalya",       gender:"female",specialty:"Moda İtalyancası & İş",       rating:4.9,students:1750,kids:false},
+    {id:"i4",name:"Giulia Ferrari",        origin:"Napoli, İtalya",       gender:"female",specialty:"Konuşma & Telaffuz",          rating:4.7,students:980, kids:false},
+    {id:"i5",name:"Luca Marino",           origin:"Torino, İtalya",       gender:"male",  specialty:"Çocuklara Eğlenceli İtalyanca",rating:4.8,students:430,kids:true},
+    {id:"i6",name:"Chiara Esposito",       origin:"Roma, İtalya",         gender:"female",specialty:"Çocuk İtalyancası",           rating:4.9,students:380,kids:true},
+  ],
+  french:[
+    {id:"f1",name:"Pierre Dubois",         origin:"Paris, Fransa",        gender:"male",  specialty:"Grammaire & DELF",            rating:4.8,students:1900,kids:false},
+    {id:"f2",name:"Dr. Jean-Luc Martin",   origin:"Lyon, Fransa",         gender:"male",  specialty:"Fransız Edebiyatı & Kültür", rating:4.9,students:1200,kids:false},
+    {id:"f3",name:"Marie Dupont",          origin:"Paris, Fransa",        gender:"female",specialty:"Konuşma & Telaffuz",          rating:4.9,students:2300,kids:false},
+    {id:"f4",name:"Camille Bernard",       origin:"Bordeaux, Fransa",     gender:"female",specialty:"İş Fransızcası & DALF",       rating:4.7,students:1050,kids:false},
+    {id:"f5",name:"Theo Laurent",          origin:"Marseille, Fransa",    gender:"male",  specialty:"Çocuklara Fransızca",         rating:4.8,students:490, kids:true},
+    {id:"f6",name:"Amelie Petit",          origin:"Nice, Fransa",         gender:"female",specialty:"Çocuk Fransızcası",           rating:4.9,students:420, kids:true},
+  ],
+  chinese:[
+    {id:"c1",name:"Wang Wei",              origin:"Pekin, Çin",           gender:"male",  specialty:"Pinyin & HSK 1-4",            rating:4.8,students:2100,kids:false},
+    {id:"c2",name:"Li Jian",               origin:"Şanghay, Çin",         gender:"male",  specialty:"İş Çincesi & HSK 5-6",        rating:4.9,students:1600,kids:false},
+    {id:"c3",name:"Lin Mei",               origin:"Pekin, Çin",           gender:"female",specialty:"Hanzi & Konuşma",             rating:4.9,students:2400,kids:false},
+    {id:"c4",name:"Zhang Li",              origin:"Chengdu, Çin",         gender:"female",specialty:"Başlangıç Çincesi & Kültür",  rating:4.8,students:1800,kids:false},
+    {id:"c5",name:"Chen Hao",              origin:"Guangzhou, Çin",       gender:"male",  specialty:"Çocuklara Eğlenceli Çince",   rating:4.9,students:580, kids:true},
+    {id:"c6",name:"Xiao Ying",             origin:"Pekin, Çin",           gender:"female",specialty:"Çocuk Çincesi & Resim",       rating:4.8,students:490, kids:true},
+  ],
+  turkish:[
+    {id:"t1",name:"Prof. Mehmet Yıldız",   origin:"İstanbul, Türkiye",    gender:"male",  specialty:"Dilbilgisi & Yazma",          rating:4.9,students:1500,kids:false},
+    {id:"t2",name:"Dr. Ali Kaya",          origin:"Ankara, Türkiye",      gender:"male",  specialty:"Yabancılara Türkçe & TÖMER",  rating:4.8,students:1100,kids:false},
+    {id:"t3",name:"Prof. Ayşe Demir",      origin:"İstanbul, Türkiye",    gender:"female",specialty:"Konuşma & Telaffuz",          rating:4.9,students:1900,kids:false},
+    {id:"t4",name:"Dr. Zeynep Arslan",     origin:"Bursa, Türkiye",       gender:"female",specialty:"Edebiyat & İleri Türkçe",     rating:4.8,students:1300,kids:false},
+    {id:"t5",name:"Öğrt. Burak Şahin",    origin:"İzmir, Türkiye",       gender:"male",  specialty:"Çocuklara Eğlenceli Türkçe",  rating:4.9,students:620, kids:true},
+    {id:"t6",name:"Öğrt. Elif Kılıç",     origin:"Ankara, Türkiye",      gender:"female",specialty:"Çocuk Türkçesi & Masallar",   rating:4.8,students:540, kids:true},
+  ],
+  russian:[
+    {id:"r1",name:"Prof. Dmitri Volkov",   origin:"Moskova, Rusya",       gender:"male",  specialty:"Kiril & Rus Grameri",         rating:4.9,students:1600,kids:false},
+    {id:"r2",name:"Dr. Alexei Petrov",     origin:"St. Petersburg, Rusya",gender:"male",  specialty:"İş Rusçası & TORFL",          rating:4.8,students:1200,kids:false},
+    {id:"r3",name:"Dr. Natasha Ivanova",   origin:"Moskova, Rusya",       gender:"female",specialty:"Konuşma & Telaffuz",          rating:4.9,students:2000,kids:false},
+    {id:"r4",name:"Prof. Elena Sorokina",  origin:"Kazan, Rusya",         gender:"female",specialty:"Edebiyat & İleri Rusça",      rating:4.8,students:1400,kids:false},
+    {id:"r5",name:"Öğrt. Ivan Novikov",    origin:"Moskova, Rusya",       gender:"male",  specialty:"Çocuklara Eğlenceli Rusça",   rating:4.9,students:560, kids:true},
+    {id:"r6",name:"Öğrt. Olga Morozova",   origin:"Novosibirsk, Rusya",   gender:"female",specialty:"Çocuk Rusçası & Masallar",    rating:4.8,students:480, kids:true},
+  ],
+  spanish:[
+    {id:"s1",name:"Prof. Carlos García",   origin:"Madrid, İspanya",      gender:"male",  specialty:"Gramática & DELE",            rating:4.9,students:2400,kids:false},
+    {id:"s2",name:"Dr. Miguel Rodríguez",  origin:"Barselona, İspanya",   gender:"male",  specialty:"İş İspanyolcası & C2",        rating:4.8,students:1800,kids:false},
+    {id:"s3",name:"Ana Martínez",          origin:"Sevilla, İspanya",     gender:"female",specialty:"Conversación & Telaffuz",     rating:4.9,students:2600,kids:false},
+    {id:"s4",name:"Dr. Isabel López",      origin:"Valencia, İspanya",    gender:"female",specialty:"Latin Amerika İspanyolcası",  rating:4.8,students:2100,kids:false},
+    {id:"s5",name:"Öğrt. Diego Sánchez",   origin:"Madrid, İspanya",      gender:"male",  specialty:"Çocuklara Eğlenceli İspanyolca",rating:4.9,students:720,kids:true},
+    {id:"s6",name:"Öğrt. Lucía Fernández", origin:"Barselona, İspanya",   gender:"female",specialty:"Çocuk İspanyolcası",         rating:4.8,students:640, kids:true},
+  ],
+};
+
+const ADMIN_KEY="linguaai_admin";
+const getAdmin=()=>{try{const s=sessionStorage.getItem(ADMIN_KEY);return s?JSON.parse(s):{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}catch{return{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}};
+const saveAdmin=(s)=>{try{sessionStorage.setItem(ADMIN_KEY,JSON.stringify(s))}catch{}};
+
+// Hoca kartı - profesyonel, fotoğrafsız
+function TeacherAvatar({teacher,lang,size=64}){
+  const initials=teacher.name.split(" ").slice(-2).map(w=>w[0]).join("");
+  const fs=size>80?28:size>50?18:13;
+  return(
+    <div style={{width:size,height:size,borderRadius:"50%",background:`linear-gradient(135deg,${lang.color},${lang.color}88)`,border:`${size>50?3:2}px solid ${lang.accent}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 4px 16px ${lang.accent}33`,position:"relative"}}>
+      <span style={{fontSize:fs,fontWeight:900,color:"#fff",fontFamily:"serif"}}>{initials}</span>
+      {teacher.kids&&size>50&&<div style={{position:"absolute",top:-3,right:-3,width:18,height:18,borderRadius:"50%",background:"#ff6b35",border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#fff",fontWeight:700}}>★</div>}
+    </div>
+  );
+}
+
+// Ders ekranı
+function SessionScreen({langId,teacher,user,onClose}){
+  const lang=LANGUAGES.find(l=>l.id===langId);
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [timeLeft,setTimeLeft]=useState(user?.plan==="trial"?1200:99999);
+  const [micActive,setMicActive]=useState(false);
+  const [voiceErr,setVoiceErr]=useState("");
+  const endRef=useRef(null);
+  const recRef=useRef(null);
+
+  useEffect(()=>{
+    setMessages([{role:"assistant",text:`Merhaba ${user?.name?.split(" ")[0]||""}! Ben ${teacher.name}, ${teacher.origin} kökenli AI öğretmenin.\n\nUzmanlık: ${teacher.specialty}\n\nYazarak veya 🎤 butonuna basarak sesli konuşabilirsin. Başlayalım!`}]);
+    if(user?.plan==="trial"){const t=setInterval(()=>setTimeLeft(s=>Math.max(0,s-1)),1000);return()=>clearInterval(t);}
+  },[]);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[messages]);
+
+  const startMic=()=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){setVoiceErr("Tarayıcınız ses girişini desteklemiyor.");return;}
+    const r=new SR();
+    r.lang=lang.id==="turkish"?"tr-TR":lang.id==="english"?"en-US":lang.id==="german"?"de-DE":lang.id==="french"?"fr-FR":lang.id==="spanish"?"es-ES":lang.id==="russian"?"ru-RU":lang.id==="italian"?"it-IT":lang.id==="chinese"?"zh-CN":"ar-SA";
+    r.onstart=()=>setMicActive(true);
+    r.onresult=e=>{setInput(e.results[0][0].transcript);setMicActive(false);};
+    r.onerror=()=>{setMicActive(false);setVoiceErr("Ses algılanamadı.");setTimeout(()=>setVoiceErr(""),3000);};
+    r.onend=()=>setMicActive(false);
+    recRef.current=r;r.start();
+  };
+  const stopMic=()=>{recRef.current?.stop();setMicActive(false);};
+
+  const send=async()=>{
+    if(!input.trim()||loading)return;
+    const msg=input.trim();setInput("");
+    setMessages(m=>[...m,{role:"user",text:msg}]);
+    setLoading(true);
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,
+          system:`Sen ${teacher.name} adlı AI dil öğretmenisin. ${teacher.origin} kökenlisin. ${lang.name} öğretiyorsun. Uzmanlık: ${teacher.specialty}. Türkçe yanıt ver, ${lang.native} örnekler ekle. Sıcak, sabırlı, motive edici ol. Maks 3 paragraf.`,
+          messages:[...messages.filter(m=>m.role).map(m=>({role:m.role,content:m.text})),{role:"user",content:msg}]})
+      });
+      const d=await r.json();
+      const reply=d.content?.[0]?.text||"Hata oluştu.";
+      setMessages(m=>[...m,{role:"assistant",text:reply}]);
+      if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(reply.substring(0,150));u.lang=lang.id==="turkish"?"tr-TR":"en-US";u.rate=0.9;window.speechSynthesis.speak(u);}
+    }catch{setMessages(m=>[...m,{role:"assistant",text:"Bağlantı hatası."}]);}
+    setLoading(false);
+  };
+
+  const mm=String(Math.floor(timeLeft/60)).padStart(2,"0");
+  const ss=String(timeLeft%60).padStart(2,"0");
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#09090f",display:"flex",flexDirection:"column",zIndex:1000}}>
+      <div style={{background:"#1a1500",borderBottom:"1px solid #3a3000",padding:"5px 16px",fontSize:11,color:"#ffd600",textAlign:"center"}}>
+        🔒 Platform hizmet kalitesi kapsamında denetlenebilir. Kayıt yapılmaz.
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 16px",background:`linear-gradient(135deg,${lang.color}dd,${lang.color}99)`,borderBottom:`2px solid ${lang.accent}`}}>
+        <TeacherAvatar teacher={teacher} lang={lang} size={44}/>
+        <div style={{flex:1}}>
+          <div style={{color:"#fff",fontWeight:700,fontSize:14}}>{teacher.name}</div>
+          <div style={{color:lang.accent,fontSize:11}}>{teacher.origin} • {teacher.specialty}</div>
+        </div>
+        {user?.plan==="trial"&&(
+          <div style={{background:"rgba(0,0,0,0.4)",borderRadius:8,padding:"4px 10px",textAlign:"center"}}>
+            <div style={{fontSize:9,color:"#aaa"}}>KALAN</div>
+            <div style={{fontWeight:800,color:timeLeft<300?"#ef5350":lang.accent,fontSize:16}}>{mm}:{ss}</div>
+          </div>
+        )}
+        <button onClick={onClose} style={{background:"rgba(255,255,255,0.1)",border:"none",color:"#fff",borderRadius:7,padding:"7px 12px",cursor:"pointer",fontWeight:600,fontSize:13}}>✕</button>
+      </div>
+
+      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+        <div style={{width:220,background:"#0d0d14",borderRight:"1px solid #1a1a2a",padding:12,display:"flex",flexDirection:"column",gap:10,overflowY:"auto"}}>
+          <div style={{background:"#111",borderRadius:10,padding:12,border:`1px solid ${lang.accent}33`,textAlign:"center"}}>
+            <div style={{fontSize:9,color:"#555",marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+              <TeacherAvatar teacher={teacher} lang={lang} size={80}/>
+            </div>
+            <div style={{color:"#fff",fontWeight:700,fontSize:13}}>{teacher.name}</div>
+            <div style={{color:lang.accent,fontSize:10,marginTop:3}}>{teacher.origin}</div>
+            <div style={{color:"#888",fontSize:10,marginTop:3}}>{teacher.specialty}</div>
+            <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:8}}>
+              <span style={{color:lang.accent,fontSize:12}}>⭐ {teacher.rating}</span>
+              <span style={{color:"#555",fontSize:11}}>{teacher.students.toLocaleString()}</span>
+            </div>
+            {loading&&<div style={{marginTop:6,color:lang.accent,fontSize:10,animation:"pulse 1s infinite"}}>Yanıt yazıyor...</div>}
+          </div>
+
+          <div style={{background:"#111",borderRadius:10,padding:12,border:"1px solid #2a2a3a",textAlign:"center"}}>
+            <div style={{fontSize:9,color:"#555",marginBottom:6,fontWeight:700,letterSpacing:1}}>KAMERA</div>
+            <div style={{background:"#1a1a2a",borderRadius:8,padding:"14px 10px"}}>
+              <div style={{fontSize:22,marginBottom:5}}>📷</div>
+              <div style={{color:"#ffd600",fontSize:11,fontWeight:700}}>Yakında!</div>
+              <div style={{color:"#555",fontSize:10,marginTop:3}}>Güncellemeyle gelecek</div>
+            </div>
+          </div>
+
+          {voiceErr&&<div style={{background:"#3a1a1a",borderRadius:8,padding:"8px 10px",color:"#ef5350",fontSize:11}}>{voiceErr}</div>}
+
+          <div style={{background:"#111",borderRadius:10,padding:12}}>
+            <div style={{fontSize:9,color:"#555",marginBottom:8,fontWeight:700,letterSpacing:1}}>MODÜLLER</div>
+            {lang.modules.map(m=>(
+              <div key={m} style={{padding:"6px 10px",borderRadius:7,marginBottom:4,background:"#1a1a2a",color:"#aaa",fontSize:11,borderLeft:`3px solid ${lang.accent}44`}}>{m}</div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
+            {messages.map((msg,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
+                {msg.role==="assistant"&&<TeacherAvatar teacher={teacher} lang={lang} size={32}/>}
+                <div style={{maxWidth:"70%",padding:"11px 14px",borderRadius:16,background:msg.role==="user"?lang.color:"#141420",color:"#fff",fontSize:13,lineHeight:1.7,borderBottomRightRadius:msg.role==="user"?4:16,borderBottomLeftRadius:msg.role==="assistant"?4:16,border:msg.role==="assistant"?"1px solid #1e1e2e":"none",whiteSpace:"pre-wrap"}}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {loading&&(
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <TeacherAvatar teacher={teacher} lang={lang} size={32}/>
+                <div style={{background:"#141420",borderRadius:16,padding:"10px 16px",border:"1px solid #1e1e2e",display:"flex",gap:4,alignItems:"center"}}>
+                  {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:lang.accent,animation:`dotB 1s ${i*0.18}s infinite`}}/>)}
+                </div>
+              </div>
+            )}
+            <div ref={endRef}/>
+          </div>
+          <div style={{padding:12,borderTop:"1px solid #1a1a2a",background:"#0d0d14"}}>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <button onMouseDown={startMic} onMouseUp={stopMic} onTouchStart={startMic} onTouchEnd={stopMic}
+                style={{width:44,height:44,borderRadius:"50%",background:micActive?"#ef5350":"#1a2a1a",border:`2px solid ${micActive?"#ef5350":lang.accent}`,cursor:"pointer",fontSize:18,flexShrink:0,animation:micActive?"pulse 0.5s infinite":"none"}}>
+                {micActive?"🔴":"🎤"}
+              </button>
+              <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
+                placeholder="Mesaj yaz veya 🎤 bas..."
+                style={{flex:1,background:"#141420",border:"1px solid #2a2a3a",borderRadius:10,padding:"11px 14px",color:"#fff",fontSize:13,outline:"none"}}/>
+              <button onClick={send} disabled={loading||!input.trim()}
+                style={{padding:"11px 18px",borderRadius:10,background:loading||!input.trim()?"#2a2a2a":lang.accent,color:loading||!input.trim()?"#555":"#000",border:"none",cursor:loading||!input.trim()?"not-allowed":"pointer",fontWeight:700,fontSize:15,flexShrink:0}}>➤</button>
+            </div>
+            <div style={{textAlign:"center",color:"#333",fontSize:10,marginTop:6}}>Mikrofona bas ve konuş • Bırak gönder • Ya da yazarak gönder</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Admin Paneli
+function AdminPanel({onClose}){
+  const [tab,setTab]=useState("dashboard");
+  const [cfg,setCfg]=useState(getAdmin());
+  const [saved,setSaved]=useState(false);
+  const [giftEmail,setGiftEmail]=useState("");
+  const [giftType,setGiftType]=useState("1 Ay Ücretsiz");
+  const [giftDone,setGiftDone]=useState(false);
+  const [newPass,setNewPass]=useState("");
+  const [newPass2,setNewPass2]=useState("");
+  const [passMsg,setPassMsg]=useState("");
+  const [watchTarget,setWatchTarget]=useState(null);
+
+  const save=(u)=>{setCfg(u);saveAdmin(u);setSaved(true);setTimeout(()=>setSaved(false),2000);};
+
+  const totalUsers=cfg.users?.length||0;
+  const activeUsers=cfg.users?.filter(u=>u.status==="active").length||0;
+  const trialUsers=cfg.users?.filter(u=>u.status==="trial").length||0;
+  const pendingCount=cfg.pendingPayments?.filter(p=>p.status==="waiting").length||0;
+  const totalRev=(cfg.users||[]).reduce((s,u)=>{const n=parseInt((u.paid||"0").replace(/[^0-9]/g,""));return s+(isNaN(n)?0:n);},0);
+
+  const TABS=[["dashboard","📊","Dashboard"],["users","👥","Kullanıcılar"],["payments","💳","Ödemeler"],["sessions","📡","Aktif Dersler"],["gift","🎁","Hediye Ver"],["notify","🔔","Bildirimler"],["settings","⚙️","Ayarlar"]];
+
+  const approvePay=(id)=>{
+    const p=cfg.pendingPayments.find(x=>x.id===id);
+    save({...cfg,
+      pendingPayments:cfg.pendingPayments.map(x=>x.id===id?{...x,status:"approved"}:x),
+      users:[...(cfg.users||[]),{id:Date.now(),name:p?.name||"",email:p?.email||"",phone:"",tc:"",birthdate:"",city:"",plan:p?.plan||"Aylık",lang:"—",status:"active",joined:new Date().toLocaleDateString("tr-TR"),paid:p?.amount||"₺0",sessions:0,trialDays:0,giftUsed:false}]
+    });
+  };
+
+  const sendGift=()=>{
+    if(!giftEmail.includes("@"))return;
+    save({...cfg,users:(cfg.users||[]).map(u=>u.email===giftEmail?{...u,plan:giftType,status:"active",giftUsed:true}:u)});
+    setGiftDone(true);
+  };
+
+  const changePass=()=>{
+    if(newPass.length<6){setPassMsg("En az 6 karakter");return;}
+    if(newPass!==newPass2){setPassMsg("Şifreler eşleşmiyor");return;}
+    save({...cfg,adminPassword:newPass});
+    setPassMsg("✅ Şifre güncellendi!");setNewPass("");setNewPass2("");
+  };
+
+  const mockSessions=[
+    {id:1,user:"Ahmet Yılmaz",lang:"Arapça",  teacher:"Dr. Khalid Al-Mansouri",start:"14:32",dur:"28 dk"},
+    {id:2,user:"Fatma Demir", lang:"İngilizce",teacher:"Sarah Mitchell",        start:"14:15",dur:"45 dk"},
+  ];
+
+  const inputStyle={width:"100%",padding:"10px 12px",background:"#1a1a2a",border:"1px solid #2a2a3a",borderRadius:9,color:"#fff",fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:12};
+  const cardStyle={background:"#111",borderRadius:12,padding:18,border:"1px solid #1a1a2a",marginBottom:14};
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"#08080e",zIndex:2000,display:"flex"}}>
+      <div style={{width:200,background:"#0d0d15",borderRight:"1px solid #1a1a2a",display:"flex",flexDirection:"column",padding:14,gap:3}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,paddingBottom:14,borderBottom:"1px solid #1a1a2a"}}>
+          <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#4caf50,#1b5e20)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:16}}>L</div>
+          <div><span style={{fontWeight:900,color:"#fff",fontSize:15}}>Lingua</span><span style={{fontWeight:900,color:"#4caf50",fontSize:15}}>AI</span></div>
+        </div>
+        <div style={{fontSize:9,color:"#3a3a4a",marginBottom:5,paddingLeft:3,letterSpacing:1,fontWeight:700}}>YÖNETİCİ</div>
+        {TABS.map(([id,ic,lb])=>(
+          <button key={id} onClick={()=>setTab(id)}
+            style={{display:"flex",alignItems:"center",gap:8,padding:"10px 11px",borderRadius:9,border:"none",background:tab===id?"#1a2a1a":"transparent",color:tab===id?"#4caf50":"#555",cursor:"pointer",fontSize:12,textAlign:"left",fontWeight:tab===id?700:400}}>
+            {ic} {lb}
+          </button>
+        ))}
+        <div style={{flex:1}}/>
+        {cfg.contactEmail&&<div style={{background:"#1a1a2a",borderRadius:7,padding:"7px 9px",marginBottom:8}}><div style={{color:"#444",fontSize:9}}>E-posta</div><div style={{color:"#4caf50",fontSize:10,fontWeight:600}}>{cfg.contactEmail}</div></div>}
+        <button onClick={onClose} style={{padding:"9px 11px",borderRadius:9,border:"1px solid #2a2a3a",background:"transparent",color:"#555",cursor:"pointer",fontSize:11}}>← Geri Dön</button>
+      </div>
+
+      <div style={{flex:1,overflowY:"auto",padding:22}}>
+
+        {tab==="dashboard"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Dashboard</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+              {[{l:"Toplam Kullanıcı",v:totalUsers,c:"#4caf50"},{l:"Aktif Abonelik",v:activeUsers,c:"#2196f3"},{l:"Deneme",v:trialUsers,c:"#ffd600"},{l:"Bekleyen Ödeme",v:pendingCount,c:"#ef5350"},{l:"Aktif Ders",v:mockSessions.length,c:"#ff7043"},{l:"Toplam Gelir",v:`₺${totalRev.toLocaleString()}`,c:"#ffd600"}].map(s=>(
+                <div key={s.l} style={{...cardStyle,marginBottom:0,padding:16}}>
+                  <div style={{fontSize:22,fontWeight:900,color:s.c,marginBottom:3}}>{s.v}</div>
+                  <div style={{color:"#555",fontSize:11}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+            {cfg.iban&&<div style={{...cardStyle}}>
+              <div style={{color:"#aaa",fontSize:12,marginBottom:8,fontWeight:600}}>IBAN Bilgileri</div>
+              <div style={{color:"#888",fontSize:13,lineHeight:2}}>{cfg.accountName&&<><span>Ad: </span><strong style={{color:"#fff"}}>{cfg.accountName}</strong><br/></>}<span>IBAN: </span><strong style={{color:"#4caf50",fontFamily:"monospace"}}>{cfg.iban}</strong>{cfg.bankName&&<><br/><span>Banka: </span><strong style={{color:"#fff"}}>{cfg.bankName}</strong></>}</div>
+            </div>}
+          </div>
+        )}
+
+        {tab==="users"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Kullanıcılar ({totalUsers})</div>
+            {(cfg.users||[]).length===0?<div style={{...cardStyle,color:"#555",textAlign:"center"}}>Henüz kullanıcı yok</div>:(
+              <div style={{...cardStyle,padding:0,overflow:"hidden"}}>
+                <div style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1fr 1fr 0.8fr",padding:"9px 14px",background:"#0d0d15",fontSize:9,color:"#444",fontWeight:700,letterSpacing:0.5}}>
+                  {["KULLANICI","TELEFON/TC","PLAN","DURUM","GELİR"].map(h=><div key={h}>{h}</div>)}
+                </div>
+                {cfg.users.map(u=>(
+                  <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1fr 1fr 0.8fr",padding:"11px 14px",borderTop:"1px solid #1a1a2a",alignItems:"center"}}>
+                    <div><div style={{color:"#fff",fontSize:12,fontWeight:600}}>{u.name}</div><div style={{color:"#444",fontSize:10}}>{u.email}</div></div>
+                    <div><div style={{color:"#888",fontSize:11}}>{u.phone||"—"}</div><div style={{color:"#444",fontSize:10}}>{u.tc?`TC: ${u.tc}`:""}</div></div>
+                    <div style={{color:"#ccc",fontSize:11}}>{u.plan}{u.giftUsed&&<span style={{color:"#4caf50"}}> 🎁</span>}</div>
+                    <div style={{display:"inline-block",background:u.status==="active"?"#1a3a1a":u.status==="trial"?"#2a2a0a":"#3a1a1a",color:u.status==="active"?"#4caf50":u.status==="trial"?"#ffd600":"#ef5350",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:600}}>
+                      {u.status==="active"?"Aktif":u.status==="trial"?"Deneme":"Askıda"}
+                    </div>
+                    <div style={{color:"#ffd600",fontSize:12,fontWeight:700}}>{u.paid}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="payments"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Ödemeler</div>
+            {!cfg.iban&&<div style={{background:"#1a1a0d",border:"1px solid #3a3a0d",borderRadius:10,padding:14,marginBottom:14}}><div style={{color:"#ffd600",fontWeight:700,marginBottom:4}}>⚠️ IBAN girilmemiş</div><div style={{color:"#888",fontSize:12}}>Ayarlar sekmesinden IBAN'ınızı girin.</div></div>}
+            <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:12}}>Bekleyen Ödemeler ({pendingCount})</div>
+            {(cfg.pendingPayments||[]).filter(p=>p.status==="waiting").length===0?<div style={{...cardStyle,color:"#555",textAlign:"center",fontSize:13}}>Bekleyen ödeme yok</div>:(cfg.pendingPayments||[]).filter(p=>p.status==="waiting").map(p=>(
+              <div key={p.id} style={{...cardStyle,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div><div style={{color:"#fff",fontWeight:700}}>{p.name}</div><div style={{color:"#888",fontSize:11,marginTop:2}}>{p.email} • {p.plan}</div></div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{color:"#ffd600",fontSize:16,fontWeight:700}}>{p.amount}</div>
+                  <button onClick={()=>approvePay(p.id)} style={{padding:"7px 14px",borderRadius:8,background:"#4caf50",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>✓ Onayla</button>
+                </div>
+              </div>
+            ))}
+            <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:12,marginTop:16}}>Onaylananlar</div>
+            {(cfg.pendingPayments||[]).filter(p=>p.status==="approved").map(p=>(
+              <div key={p.id} style={{...cardStyle,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div><div style={{color:"#fff",fontSize:12}}>{p.name} — {p.plan}</div></div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{color:"#ffd600",fontWeight:700}}>{p.amount}</div>
+                  <div style={{background:"#1a3a1a",color:"#4caf50",borderRadius:5,padding:"2px 8px",fontSize:10,fontWeight:600}}>✓ Onaylı</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="sessions"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:8}}>Aktif Dersler</div>
+            <div style={{color:"#555",fontSize:12,marginBottom:16}}>Hizmet kalitesi denetimi kapsamında izleyebilirsiniz. Kayıt yapılmaz.</div>
+            {mockSessions.map(s=>(
+              <div key={s.id} style={{...cardStyle,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{color:"#fff",fontWeight:700}}>{s.user}</div>
+                  <div style={{color:"#888",fontSize:11,marginTop:2}}>{s.lang} • {s.teacher}</div>
+                  <div style={{color:"#555",fontSize:10,marginTop:2}}>{s.start} • {s.dur}</div>
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{background:"rgba(239,83,80,0.12)",color:"#ef5350",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700}}>● CANLI</div>
+                  <button onClick={()=>setWatchTarget(s)} style={{padding:"7px 12px",borderRadius:7,background:"#1a1a2a",color:"#64b5f6",border:"1px solid #2a2a4a",cursor:"pointer",fontSize:11,fontWeight:600}}>👁 İzle</button>
+                </div>
+              </div>
+            ))}
+            {watchTarget&&(
+              <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+                <div style={{background:"#111",borderRadius:18,padding:26,width:380,border:"1px solid #2a2a3a"}}>
+                  <div style={{color:"#fff",fontSize:16,fontWeight:700,marginBottom:4}}>👁 İzleme Modu</div>
+                  <div style={{color:"#888",fontSize:12,marginBottom:16}}>{watchTarget.user} • {watchTarget.lang}</div>
+                  <div style={{background:"#1a1a0d",borderRadius:10,padding:12,border:"1px solid #3a3a0d",marginBottom:14}}>
+                    <div style={{color:"#ffd600",fontSize:12,fontWeight:700,marginBottom:4}}>Bilgilendirme</div>
+                    <div style={{color:"#777",fontSize:11,lineHeight:1.8}}>• Kullanıcı sizin katıldığınızı görmez<br/>• Kayıt yapılmaz<br/>• Yalnızca hizmet kalitesi denetimi amaçlıdır</div>
+                  </div>
+                  <div style={{display:"flex",gap:10}}>
+                    <button onClick={()=>setWatchTarget(null)} style={{flex:1,padding:10,background:"transparent",color:"#666",border:"1px solid #333",borderRadius:9,cursor:"pointer"}}>İptal</button>
+                    <button onClick={()=>setWatchTarget(null)} style={{flex:2,padding:10,background:"#4caf50",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700}}>Derse Katıl</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab==="gift"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Hediye Ver</div>
+            <div style={{...cardStyle,maxWidth:440}}>
+              {giftDone?(
+                <div style={{textAlign:"center",padding:16}}>
+                  <div style={{fontSize:50,marginBottom:12}}>🎁</div>
+                  <div style={{color:"#fff",fontSize:18,fontWeight:700,marginBottom:6}}>Gönderildi!</div>
+                  <div style={{color:"#888",fontSize:12,marginBottom:16}}>{giftEmail} → {giftType}</div>
+                  <button onClick={()=>{setGiftDone(false);setGiftEmail("");}} style={{padding:"9px 26px",background:"#4caf50",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700}}>Tamam</button>
+                </div>
+              ):(
+                <>
+                  <div style={{color:"#aaa",fontSize:12,marginBottom:14,lineHeight:1.6}}>Kullanıcının e-posta adresini girerek ücretsiz kullanım hediye edin.</div>
+                  <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>E-posta</div>
+                  <input value={giftEmail} onChange={e=>setGiftEmail(e.target.value)} placeholder="ornek@mail.com" style={inputStyle}/>
+                  <div style={{color:"#aaa",fontSize:11,marginBottom:8}}>Hediye Türü</div>
+                  {["7 Gün Ücretsiz","1 Ay Ücretsiz","3 Ay Ücretsiz","Yıllık Ücretsiz","Sınırsız Kullanım"].map(g=>(
+                    <div key={g} onClick={()=>setGiftType(g)}
+                      style={{padding:"10px 14px",borderRadius:9,background:giftType===g?"#1a2a1a":"#1a1a2a",border:`1px solid ${giftType===g?"#4caf50":"#2a2a3a"}`,color:giftType===g?"#4caf50":"#ccc",cursor:"pointer",marginBottom:7,fontSize:12,fontWeight:giftType===g?700:400}}>
+                      🎁 {g}
+                    </div>
+                  ))}
+                  <button onClick={sendGift} style={{width:"100%",padding:12,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14,marginTop:4}}>Hediye Gönder</button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab==="notify"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Bildirim Gönder</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+              {[{t:"Premium Teşvik",m:"5 günlük denemeniz bitiyor! Premium'a geçin."},{t:"Özel İndirim",m:"Bu hafta yıllık plana özel indirim!"},{t:"Yeni Hoca",m:"Yeni hocalarımız uygulamaya katıldı!"},{t:"Ders Hatırlatma",m:"Bugün ders yapmadınız. Hocanız bekliyor."}].map(n=>(
+                <div key={n.t} style={{...cardStyle,marginBottom:0}}>
+                  <div style={{color:"#fff",fontWeight:700,marginBottom:6,fontSize:13}}>{n.t}</div>
+                  <div style={{color:"#666",fontSize:11,lineHeight:1.6,marginBottom:10}}>{n.m}</div>
+                  <button style={{width:"100%",padding:"7px",borderRadius:7,background:"#1a2a1a",color:"#4caf50",border:"1px solid #2a4a2a",cursor:"pointer",fontSize:11,fontWeight:600}}>Tüm Kullanıcılara Gönder</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab==="settings"&&(
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:"#fff",marginBottom:16}}>Ayarlar</div>
+            <div style={cardStyle}>
+              <div style={{color:"#fff",fontWeight:700,marginBottom:14,fontSize:14}}>👤 Yönetici Hesabı</div>
+              <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>Yönetici E-postası</div>
+              <input value={cfg.adminEmail||""} onChange={e=>setCfg(s=>({...s,adminEmail:e.target.value}))} placeholder="admin@linguaai.com" style={inputStyle}/>
+              <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>Kullanıcılara Gösterilen İletişim E-postası</div>
+              <input value={cfg.contactEmail||""} onChange={e=>setCfg(s=>({...s,contactEmail:e.target.value}))} placeholder="iletisim@linguaai.com" style={inputStyle}/>
+            </div>
+            <div style={cardStyle}>
+              <div style={{color:"#fff",fontWeight:700,marginBottom:14,fontSize:14}}>💳 IBAN Bilgileri</div>
+              <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>Ad Soyad</div>
+              <input value={cfg.accountName||""} onChange={e=>setCfg(s=>({...s,accountName:e.target.value}))} placeholder="Ad Soyad" style={inputStyle}/>
+              <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>IBAN</div>
+              <input value={cfg.iban||""} onChange={e=>setCfg(s=>({...s,iban:e.target.value}))} placeholder="TR00 0000 0000 0000 0000 0000 00" style={inputStyle}/>
+              <div style={{color:"#aaa",fontSize:11,marginBottom:5}}>Banka Adı</div>
+              <input value={cfg.bankName||""} onChange={e=>setCfg(s=>({...s,bankName:e.target.value}))} placeholder="Ziraat Bankası" style={inputStyle}/>
+            </div>
+            <div style={cardStyle}>
+              <div style={{color:"#fff",fontWeight:700,marginBottom:6,fontSize:14}}>🔐 Şifre Değiştir</div>
+              <div style={{color:"#888",fontSize:11,marginBottom:12}}>Mevcut şifre: admin123 (değiştirmeniz önerilir)</div>
+              <input type="password" value={newPass} onChange={e=>setNewPass(e.target.value)} placeholder="Yeni şifre (min 6 karakter)" style={inputStyle}/>
+              <input type="password" value={newPass2} onChange={e=>setNewPass2(e.target.value)} placeholder="Tekrar girin" style={inputStyle}/>
+              {passMsg&&<div style={{color:passMsg.startsWith("✅")?"#4caf50":"#ef5350",fontSize:12,marginBottom:10}}>{passMsg}</div>}
+              <button onClick={changePass} style={{padding:"9px 18px",background:"#1a2a1a",color:"#4caf50",border:"1px solid #2a4a2a",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:12}}>Şifreyi Güncelle</button>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <button onClick={()=>save(cfg)} style={{padding:"13px 28px",background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>💾 Kaydet</button>
+              {saved&&<div style={{color:"#4caf50",fontSize:13,fontWeight:600}}>✅ Kaydedildi!</div>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Ana Uygulama
+function App(){
+  const [screen,setScreen]=useState("home");
+  const [user,setUser]=useState(null);
+  const [showReg,setShowReg]=useState(false);
+  const [showAdmin,setShowAdmin]=useState(false);
+  const [showAdminLogin,setShowAdminLogin]=useState(false);
+  const [adminPass,setAdminPass]=useState("");
+  const [adminErr,setAdminErr]=useState(false);
+  const [selLang,setSelLang]=useState(null);
+  const [kidsMode,setKidsMode]=useState(false);
+  const [activeSession,setActiveSession]=useState(null);
+  const [payPlan,setPayPlan]=useState(null);
+  const [regForm,setRegForm]=useState({name:"",email:"",phone:"",tc:"",birthdate:"",city:"",password:"",confirm:"",consent:false});
+  const [regErrors,setRegErrors]=useState({});
+  const [regDone,setRegDone]=useState(false);
+  const adminCfg=getAdmin();
+
+  if(showAdmin)return <AdminPanel onClose={()=>setShowAdmin(false)}/>;
+  if(activeSession)return <SessionScreen langId={activeSession.lang} teacher={activeSession.teacher} user={user} onClose={()=>setActiveSession(null)}/>;
+
+  const validateReg=()=>{
+    const e={};
+    if(!regForm.name.trim())e.name="Zorunlu";
+    if(!regForm.email.includes("@"))e.email="Geçerli e-posta girin";
+    if(!regForm.phone.trim())e.phone="Zorunlu";
+    if(regForm.tc.length!==11||!/^\d+$/.test(regForm.tc))e.tc="11 haneli TC girin";
+    if(!regForm.birthdate)e.birthdate="Zorunlu";
+    if(!regForm.city.trim())e.city="Zorunlu";
+    if(regForm.password.length<6)e.password="En az 6 karakter";
+    if(regForm.password!==regForm.confirm)e.confirm="Eşleşmiyor";
+    if(!regForm.consent)e.consent="Onay gerekli";
+    setRegErrors(e);return Object.keys(e).length===0;
+  };
+
+  const tryAdmin=()=>{
+    const s=getAdmin();
+    if(adminPass===s.adminPassword){setShowAdmin(true);setShowAdminLogin(false);setAdminPass("");setAdminErr(false);}
+    else setAdminErr(true);
+  };
+
+  const nav=(s)=>{setScreen(s);setSelLang(null);};
+
+  const btnPrimary={padding:"14px 32px",background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:13,cursor:"pointer",fontWeight:700,fontSize:15,boxShadow:"0 4px 20px rgba(76,175,80,0.4)"};
+  const btnGhost={padding:"14px 32px",background:"transparent",color:"#888",border:"1px solid #2a2a3a",borderRadius:13,cursor:"pointer",fontWeight:600,fontSize:15};
+  const inputS={width:"100%",padding:"11px 13px",background:"#1a1a2a",border:"1px solid #2a2a3a",borderRadius:9,color:"#fff",fontSize:13,outline:"none",boxSizing:"border-box"};
+
+  return(
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#07070f,#0d0d1a 55%,#070f07)"}}>
+      {/* NAV */}
+      <nav style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 24px",borderBottom:"1px solid #1a1a2a",background:"rgba(7,7,15,0.97)",position:"sticky",top:0,zIndex:100,backdropFilter:"blur(20px)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>nav("home")}>
+          <div style={{width:34,height:34,borderRadius:9,background:"linear-gradient(135deg,#4caf50,#1b5e20)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:17,boxShadow:"0 2px 12px rgba(76,175,80,0.4)"}}>L</div>
+          <span style={{fontSize:19,fontWeight:900,color:"#fff"}}>Lingua</span><span style={{fontSize:19,fontWeight:900,color:"#4caf50"}}>AI</span>
+        </div>
+        <div style={{display:"flex",gap:3}}>
+          {[["home","Ana Sayfa"],["languages","Diller"],["pricing","Fiyatlar"],["contact","İletişim"]].map(([s,l])=>(
+            <button key={s} onClick={()=>nav(s)} style={{padding:"7px 13px",borderRadius:7,border:"none",cursor:"pointer",background:screen===s?"#4caf50":"transparent",color:screen===s?"#000":"#777",fontWeight:screen===s?700:400,fontSize:12}}>{l}</button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:7,alignItems:"center"}}>
+          {user?(
+            <>
+              <div style={{background:"#1a2a1a",borderRadius:7,padding:"6px 12px",fontSize:12,color:"#4caf50",fontWeight:600}}>👤 {user.name.split(" ")[0]}</div>
+              <button onClick={()=>setUser(null)} style={{padding:"6px 11px",borderRadius:7,border:"1px solid #2a2a3a",background:"transparent",color:"#777",cursor:"pointer",fontSize:11}}>Çıkış</button>
+            </>
+          ):(
+            <button onClick={()=>setShowReg(true)} style={{padding:"8px 18px",borderRadius:8,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12,boxShadow:"0 2px 10px rgba(76,175,80,0.3)"}}>Üye Ol</button>
+          )}
+          <button onClick={()=>setShowAdminLogin(true)} style={{padding:"6px 9px",borderRadius:7,border:"1px solid #1a1a2a",background:"transparent",color:"#333",cursor:"pointer",fontSize:10}}>⚙</button>
+        </div>
+      </nav>
+
+      {/* HOME */}
+      {screen==="home"&&(
+        <div style={{animation:"fadeUp 0.6s ease"}}>
+          <div style={{textAlign:"center",padding:"70px 24px 44px"}}>
+            <div style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(76,175,80,0.08)",border:"1px solid rgba(76,175,80,0.2)",borderRadius:20,padding:"5px 16px",fontSize:11,color:"#4caf50",marginBottom:20,fontWeight:600}}>
+              <span style={{width:5,height:5,borderRadius:"50%",background:"#4caf50",display:"inline-block"}}/>
+              5 Gün Ücretsiz • Yazılı & Sesli AI Hoca • 10 Dil
+            </div>
+            <h1 style={{fontSize:48,fontWeight:900,lineHeight:1.08,margin:"0 auto 18px",maxWidth:660,letterSpacing:-1.5,color:"#fff"}}>
+              AI Hocanla<br/>
+              <span style={{background:"linear-gradient(90deg,#4caf50,#66bb6a,#a5d6a7)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>10 Dil Öğren</span>
+            </h1>
+            <p style={{fontSize:15,color:"#555",maxWidth:460,margin:"0 auto 32px",lineHeight:1.8}}>
+              Yaz veya mikrofona bas, AI hocanla birebir ders yap.<br/>Kameralı özellik yakında güncellemeyle geliyor!
+            </p>
+            <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+              <button style={btnPrimary} onClick={()=>user?nav("languages"):setShowReg(true)}>Ücretsiz Başla →</button>
+              <button style={btnGhost} onClick={()=>nav("pricing")}>Fiyatlar</button>
+            </div>
+          </div>
+
+          {/* Hoca vitrin */}
+          <div style={{display:"flex",justifyContent:"center",gap:16,padding:"0 24px 40px",flexWrap:"wrap",alignItems:"flex-end"}}>
+            {[
+              {name:"Şeyh Ahmed Al-Ghamdi",gender:"male", lang:LANGUAGES[0],fi:0},
+              {name:"Sarah Mitchell",       gender:"female",lang:LANGUAGES[2],fi:1},
+              {name:"Dr. Natasha Ivanova",  gender:"female",lang:LANGUAGES[8],fi:2},
+              {name:"Prof. Carlos García",  gender:"male",  lang:LANGUAGES[9],fi:0},
+              {name:"Lin Mei",              gender:"female",lang:LANGUAGES[6],fi:1},
+              {name:"Prof. Klaus Weber",    gender:"male",  lang:LANGUAGES[3],fi:2},
+            ].map((t,i)=>(
+              <div key={i} style={{textAlign:"center",animation:`float${t.fi} ${2.8+i*0.25}s ease-in-out infinite`,cursor:"pointer"}} onClick={()=>nav("languages")}>
+                <TeacherAvatar teacher={{name:t.name,gender:t.gender,kids:false}} lang={t.lang} size={72}/>
+                <div style={{color:"#555",fontSize:10,marginTop:6}}>{t.lang.name}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:12,padding:"0 24px 40px",justifyContent:"center",flexWrap:"wrap"}}>
+            {[{t:"🎤 Sesli Konuşma",d:"Mikrofona bas, hocanla sesli konuş"},{t:"✍️ Yazılı Ders",d:"İstediğin konuda yazarak pratik yap"},{t:"🌍 10 Dil",d:"Kur'an dahil 10 dil, 60 farklı hoca"},{t:"👶 Çocuk Modu",d:"Her dilde özel çocuk hocaları"}].map(f=>(
+              <div key={f.t} style={{background:"#0d0d1a",borderRadius:14,padding:"18px 16px",width:185,border:"1px solid #1a1a2a",textAlign:"center"}}>
+                <div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"#fff"}}>{f.t}</div>
+                <div style={{color:"#444",fontSize:11,lineHeight:1.6}}>{f.d}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{padding:"0 24px 60px",textAlign:"center"}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#444",marginBottom:18}}>10 Dil</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+              {LANGUAGES.map(lang=>(
+                <button key={lang.id} onClick={()=>{setSelLang(lang);nav("languages");}}
+                  style={{background:"#0d0d1a",border:"1px solid #1a1a2a",borderRadius:10,padding:"9px 16px",cursor:"pointer",color:"#888",display:"flex",alignItems:"center",gap:7,fontSize:13}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=lang.accent;e.currentTarget.style.color="#fff";}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor="#1a1a2a";e.currentTarget.style.color="#888";}}>
+                  <span style={{fontSize:16}}>{lang.flag}</span>{lang.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DİLLER */}
+      {screen==="languages"&&!selLang&&(
+        <div style={{padding:"28px 24px"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <h2 style={{fontSize:28,fontWeight:800,marginBottom:6,color:"#fff"}}>Dil Seç</h2>
+            <p style={{color:"#555",fontSize:13}}>Her dilde yetişkin ve çocuklara özel hocanlar</p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:16,maxWidth:1000,margin:"0 auto"}}>
+            {LANGUAGES.map(lang=>(
+              <div key={lang.id} onClick={()=>setSelLang(lang)}
+                style={{background:"#0d0d1a",borderRadius:16,overflow:"hidden",border:"1px solid #1a1a2a",cursor:"pointer",transition:"all 0.2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=lang.accent;e.currentTarget.style.transform="translateY(-3px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="#1a1a2a";e.currentTarget.style.transform="translateY(0)";}}>
+                <div style={{background:`linear-gradient(135deg,${lang.color},${lang.color}aa)`,padding:"16px 16px 12px",borderBottom:`3px solid ${lang.accent}`}}>
+                  <div style={{fontSize:26}}>{lang.flag}</div>
+                  <div style={{fontSize:17,fontWeight:800,marginTop:5,color:"#fff"}}>{lang.name}</div>
+                  <div style={{color:lang.accent,fontSize:12,marginTop:2}}>{lang.native}</div>
+                </div>
+                <div style={{padding:14}}>
+                  <div style={{color:"#444",fontSize:11,marginBottom:10}}>{lang.desc}</div>
+                  <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:12}}>
+                    {lang.modules.map(m=><span key={m} style={{background:"#1a1a2a",border:`1px solid ${lang.accent}22`,borderRadius:4,padding:"2px 6px",fontSize:10,color:"#666"}}>{m}</span>)}
+                  </div>
+                  <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                    {TEACHERS[lang.id].filter(t=>!t.kids).map(t=><TeacherAvatar key={t.id} teacher={t} lang={lang} size={26}/>)}
+                    <div style={{background:"#1a1a2a",borderRadius:5,padding:"2px 7px",fontSize:9,color:"#64b5f6",fontWeight:600}}>+2 Çocuk</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* HOCA SEÇ */}
+      {screen==="languages"&&selLang&&(
+        <div style={{padding:"28px 24px"}}>
+          <button onClick={()=>setSelLang(null)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:12,marginBottom:16}}>← Geri</button>
+          <div style={{textAlign:"center",marginBottom:22}}>
+            <div style={{fontSize:32,marginBottom:6}}>{selLang.flag}</div>
+            <h2 style={{fontSize:22,fontWeight:800,marginBottom:5,color:"#fff"}}>{selLang.name} — Hocanı Seç</h2>
+            <p style={{color:"#555",fontSize:12}}>2 erkek + 2 kadın yetişkin • 1 erkek + 1 kadın çocuk hocası</p>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:22}}>
+            {[false,true].map(k=>(
+              <button key={String(k)} onClick={()=>setKidsMode(k)}
+                style={{padding:"9px 22px",borderRadius:9,border:`1px solid ${kidsMode===k?selLang.accent:"#2a2a3a"}`,background:kidsMode===k?`${selLang.accent}18`:"transparent",color:kidsMode===k?selLang.accent:"#666",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                {k?"👶 Çocuklara Özel":"🎓 Yetişkin Hocaları"}
+              </button>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(210px,1fr))",gap:16,maxWidth:900,margin:"0 auto"}}>
+            {TEACHERS[selLang.id].filter(t=>t.kids===kidsMode).map(t=>(
+              <div key={t.id}
+                style={{background:"#0d0d1a",borderRadius:16,padding:18,border:"1px solid #1a1a2a",textAlign:"center",cursor:"pointer",transition:"all 0.2s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=selLang.accent;e.currentTarget.style.transform="translateY(-2px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="#1a1a2a";e.currentTarget.style.transform="translateY(0)";}}
+                onClick={()=>{if(!user){setShowReg(true);return;}setActiveSession({lang:selLang.id,teacher:t});}}>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><TeacherAvatar teacher={t} lang={selLang} size={80}/></div>
+                {t.kids&&<div style={{background:"#0d1a0d",color:"#4caf50",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,marginBottom:8,display:"inline-block",border:"1px solid #1a3a1a"}}>👶 Çocuklara Özel</div>}
+                <div style={{fontWeight:700,fontSize:14,marginBottom:3,color:"#fff"}}>{t.name}</div>
+                <div style={{color:"#555",fontSize:11,marginBottom:7}}>{t.origin}</div>
+                <div style={{background:"#1a1a2a",borderRadius:7,padding:"3px 9px",fontSize:11,color:"#aaa",marginBottom:10,display:"inline-block"}}>{t.specialty}</div>
+                <div style={{display:"flex",justifyContent:"center",gap:12,marginBottom:14}}>
+                  <span style={{color:selLang.accent,fontSize:12,fontWeight:600}}>⭐ {t.rating}</span>
+                  <span style={{color:"#444",fontSize:11}}>{t.students.toLocaleString()}</span>
+                </div>
+                <button style={{width:"100%",padding:"9px",borderRadius:9,background:`linear-gradient(135deg,${selLang.accent},${selLang.accent}cc)`,color:"#000",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  🎤 Derse Başla
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FİYATLAR */}
+      {screen==="pricing"&&(
+        <div style={{padding:"50px 24px",textAlign:"center"}}>
+          <h2 style={{fontSize:32,fontWeight:800,marginBottom:8,color:"#fff"}}>Fiyatlandırma</h2>
+          <p style={{color:"#555",marginBottom:40,fontSize:14}}>5 gün ücretsiz dene, havale ile öde</p>
+          <div style={{display:"flex",gap:16,justifyContent:"center",flexWrap:"wrap"}}>
+            {[
+              {id:"trial",name:"5 Günlük Deneme",price:"Ücretsiz",period:"",highlight:false,features:["1 dil","Günde 20 dk","Yazılı AI hoca","Sesli konuşma","Kamera yakında"]},
+              {id:"monthly",name:"Aylık Plan",price:"₺299",period:"/ay",highlight:false,features:["Tüm 10 dil","Sınırsız ders","4+2 hoca","Çocuk hocaları","İlerleme raporu"]},
+              {id:"yearly",name:"Yıllık Plan",price:"₺1990",period:"/yıl",highlight:true,features:["Tüm 10 dil","Sınırsız ders","4+2 hoca","Çocuk hocaları","İlerleme raporu","Öncelikli destek","%44 tasarruf"]},
+            ].map((plan,idx)=>(
+              <div key={plan.id}
+                style={{background:plan.highlight?"linear-gradient(135deg,#0d1f0d,#0d0d1a)":"#0d0d1a",border:plan.highlight?"2px solid #4caf50":"1px solid #2a2a3a",borderRadius:20,padding:26,width:240,position:"relative",transition:"transform 0.2s"}}
+                onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
+                onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                {plan.highlight&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",borderRadius:18,padding:"3px 14px",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>⭐ EN POPÜLER</div>}
+                <div style={{fontSize:15,fontWeight:700,marginBottom:7,color:"#fff"}}>{plan.name}</div>
+                <div style={{marginBottom:18}}>
+                  <span style={{fontSize:34,fontWeight:900,color:plan.highlight?"#4caf50":"#fff"}}>{plan.price}</span>
+                  <span style={{color:"#444",fontSize:13}}>{plan.period}</span>
+                </div>
+                {plan.features.map(f=>(
+                  <div key={f} style={{display:"flex",gap:7,marginBottom:7,textAlign:"left"}}>
+                    <span style={{color:"#4caf50",fontWeight:700}}>✓</span>
+                    <span style={{color:"#888",fontSize:12}}>{f}</span>
+                  </div>
+                ))}
+                <button
+                  onClick={()=>{if(plan.id==="trial"){user?nav("languages"):setShowReg(true);}else{if(!user)setShowReg(true);else setPayPlan(plan);}}}
+                  style={{width:"100%",marginTop:18,padding:11,borderRadius:10,background:plan.highlight?"linear-gradient(135deg,#4caf50,#2e7d32)":plan.id==="trial"?"transparent":"#1a1a2a",color:plan.highlight?"#fff":"#ccc",border:plan.id==="trial"?"1px solid #4caf50":plan.highlight?"none":"1px solid #2a2a3a",cursor:"pointer",fontWeight:700,fontSize:13}}>
+                  {plan.id==="trial"?"Ücretsiz Başla":"Havale ile Satın Al"}
+                </button>
+              </div>
+            ))}
+          </div>
+          {adminCfg.iban&&(
+            <div style={{marginTop:36,background:"#0d0d1a",borderRadius:14,padding:22,maxWidth:460,margin:"36px auto 0",border:"1px solid #1a1a2a",textAlign:"left"}}>
+              <div style={{color:"#fff",fontWeight:700,marginBottom:10,fontSize:14}}>💳 Havale Bilgileri</div>
+              <div style={{color:"#888",fontSize:13,lineHeight:2.2}}>
+                Ad Soyad: <strong style={{color:"#fff"}}>{adminCfg.accountName}</strong><br/>
+                IBAN: <strong style={{color:"#4caf50",fontFamily:"monospace"}}>{adminCfg.iban}</strong><br/>
+                Banka: <strong style={{color:"#fff"}}>{adminCfg.bankName}</strong>
+              </div>
+              <div style={{background:"#1a2a1a",borderRadius:8,padding:10,marginTop:10,border:"1px solid #2a4a2a"}}>
+                <div style={{color:"#888",fontSize:11,lineHeight:1.7}}>Havale açıklamasına e-posta adresinizi yazın.<br/>Onaylandıktan sonra üyeliğiniz aktifleşir (max 2 saat).</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* İLETİŞİM */}
+      {screen==="contact"&&(
+        <div style={{padding:"50px 24px",maxWidth:520,margin:"0 auto"}}>
+          <h2 style={{fontSize:28,fontWeight:800,marginBottom:8,color:"#fff"}}>İletişim</h2>
+          <p style={{color:"#555",marginBottom:28,fontSize:14}}>Sorularınız için bize ulaşın</p>
+          <div style={{background:"#0d0d1a",borderRadius:16,padding:24,border:"1px solid #1a1a2a"}}>
+            {adminCfg.contactEmail&&(
+              <div style={{marginBottom:20}}>
+                <div style={{color:"#aaa",fontSize:12,marginBottom:6}}>E-posta</div>
+                <a href={`mailto:${adminCfg.contactEmail}`} style={{color:"#4caf50",fontSize:17,fontWeight:700,textDecoration:"none"}}>{adminCfg.contactEmail}</a>
+              </div>
+            )}
+            <div style={{borderTop:"1px solid #1a1a2a",paddingTop:18}}>
+              <div style={{color:"#aaa",fontSize:12,marginBottom:12}}>Mesaj Gönderin</div>
+              <input placeholder="Adınız" style={{...inputS,marginBottom:10}}/>
+              <input placeholder="E-postanız" style={{...inputS,marginBottom:10}}/>
+              <textarea placeholder="Mesajınız..." style={{...inputS,minHeight:90,resize:"vertical",marginBottom:14}}/>
+              <button style={{width:"100%",padding:12,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>Gönder</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KAYIT MODAL */}
+      {showReg&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+          <div style={{background:"#111",borderRadius:20,padding:28,width:400,border:"1px solid #2a2a3a",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
+              <div><div style={{color:"#fff",fontSize:18,fontWeight:800}}>Hesap Oluştur</div><div style={{color:"#555",fontSize:11,marginTop:2}}>5 gün ücretsiz başla</div></div>
+              <button onClick={()=>setShowReg(false)} style={{background:"none",border:"none",color:"#555",fontSize:20,cursor:"pointer"}}>✕</button>
+            </div>
+            {regDone?(
+              <div style={{textAlign:"center",padding:"16px 0"}}>
+                <div style={{fontSize:56,marginBottom:12}}>🎉</div>
+                <div style={{color:"#fff",fontSize:20,fontWeight:700,marginBottom:7}}>Hoş Geldin!</div>
+                <div style={{color:"#888",fontSize:12,marginBottom:18}}>5 günlük ücretsiz denemen başladı.</div>
+                <button onClick={()=>{setUser(regForm);setShowReg(false);setRegDone(false);nav("languages");}} style={{width:"100%",padding:12,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>Derse Başla →</button>
+              </div>
+            ):(
+              <>
+                {[{l:"Ad Soyad",k:"name",p:"Ahmet Yılmaz",t:"text"},{l:"E-posta",k:"email",p:"ornek@mail.com",t:"email"},{l:"Telefon",k:"phone",p:"05XX XXX XXXX",t:"tel"},{l:"T.C. Kimlik No",k:"tc",p:"12345678901",t:"text"},{l:"Doğum Tarihi",k:"birthdate",p:"",t:"date"},{l:"Şehir",k:"city",p:"İstanbul",t:"text"},{l:"Şifre",k:"password",p:"min 6 karakter",t:"password"},{l:"Şifre Tekrar",k:"confirm",p:"tekrar girin",t:"password"}].map(f=>(
+                  <div key={f.k} style={{marginBottom:10}}>
+                    <div style={{color:"#aaa",fontSize:11,marginBottom:3}}>{f.l}</div>
+                    <input type={f.t} value={regForm[f.k]} onChange={e=>setRegForm(p=>({...p,[f.k]:e.target.value}))} placeholder={f.p}
+                      style={{...inputS,border:`1px solid ${regErrors[f.k]?"#ef5350":"#2a2a3a"}`}}/>
+                    {regErrors[f.k]&&<div style={{color:"#ef5350",fontSize:10,marginTop:2}}>{regErrors[f.k]}</div>}
+                  </div>
+                ))}
+                <div style={{background:"#1a1a2a",borderRadius:9,padding:11,marginBottom:13,border:"1px solid #2a2a3a"}}>
+                  <label style={{display:"flex",gap:9,cursor:"pointer",alignItems:"flex-start"}}>
+                    <input type="checkbox" checked={regForm.consent} onChange={e=>setRegForm(p=>({...p,consent:e.target.checked}))} style={{marginTop:2,width:15,height:15,accentColor:"#4caf50"}}/>
+                    <span style={{color:"#888",fontSize:11,lineHeight:1.6}}>Platform hizmet kalitesi kontrolleri kapsamındaki denetim uygulamalarını ve gizlilik politikasını okudum, kabul ediyorum.</span>
+                  </label>
+                  {regErrors.consent&&<div style={{color:"#ef5350",fontSize:10,marginTop:3}}>{regErrors.consent}</div>}
+                </div>
+                <button onClick={()=>{if(validateReg())setRegDone(true);}} style={{width:"100%",padding:12,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>Kayıt Ol →</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ÖDEME MODAL */}
+      {payPlan&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+          <div style={{background:"#111",borderRadius:20,padding:26,width:400,border:"1px solid #2a2a3a"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+              <div><div style={{color:"#fff",fontSize:16,fontWeight:700}}>Ödeme</div><div style={{color:"#888",fontSize:11,marginTop:2}}>{payPlan.name} — {payPlan.price}{payPlan.period}</div></div>
+              <button onClick={()=>setPayPlan(null)} style={{background:"none",border:"none",color:"#555",fontSize:18,cursor:"pointer"}}>✕</button>
+            </div>
+            {adminCfg.iban?(
+              <div style={{background:"#1a1a2a",borderRadius:11,padding:15,marginBottom:14,border:"1px solid #2a2a3a"}}>
+                <div style={{color:"#fff",fontWeight:700,marginBottom:9,fontSize:13}}>Havale Bilgileri</div>
+                <div style={{color:"#888",fontSize:12,lineHeight:2.2}}>
+                  Ad Soyad: <strong style={{color:"#fff"}}>{adminCfg.accountName}</strong><br/>
+                  IBAN: <strong style={{color:"#4caf50",fontFamily:"monospace",fontSize:13}}>{adminCfg.iban}</strong><br/>
+                  Tutar: <strong style={{color:"#ffd600"}}>{payPlan.price}</strong>
+                </div>
+                <div style={{background:"#1a2a1a",borderRadius:7,padding:9,marginTop:9,border:"1px solid #2a4a2a"}}>
+                  <div style={{color:"#888",fontSize:11}}>Açıklama: <strong style={{color:"#fff"}}>{user?.email}</strong></div>
+                </div>
+              </div>
+            ):<div style={{color:"#888",fontSize:13,marginBottom:14}}>Ödeme bilgileri yakında eklenecektir.</div>}
+            <button onClick={()=>{alert("Bildiriminiz alındı! Havale onaylandıktan sonra üyeliğiniz aktifleşecektir.");setPayPlan(null);}}
+              style={{width:"100%",padding:12,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:13}}>
+              ✓ Havaleyi Yaptım, Bildir
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ADMİN GİRİŞ */}
+      {showAdminLogin&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:3000}}>
+          <div style={{background:"#111",borderRadius:18,padding:26,width:300,border:"1px solid #2a2a3a"}}>
+            <div style={{color:"#fff",fontSize:15,fontWeight:700,marginBottom:14}}>Yönetici Girişi</div>
+            <input type="password" value={adminPass} onChange={e=>{setAdminPass(e.target.value);setAdminErr(false);}}
+              onKeyDown={e=>e.key==="Enter"&&tryAdmin()} placeholder="Şifre girin"
+              style={{...inputS,border:`1px solid ${adminErr?"#ef5350":"#2a2a3a"}`,marginBottom:6}}/>
+            {adminErr&&<div style={{color:"#ef5350",fontSize:11,marginBottom:8}}>Yanlış şifre</div>}
+            <div style={{height:10}}/>
+            <div style={{display:"flex",gap:9}}>
+              <button onClick={()=>{setShowAdminLogin(false);setAdminErr(false);setAdminPass("");}} style={{flex:1,padding:10,background:"transparent",color:"#666",border:"1px solid #2a2a3a",borderRadius:9,cursor:"pointer",fontSize:12}}>İptal</button>
+              <button onClick={tryAdmin} style={{flex:1,padding:10,background:"linear-gradient(135deg,#4caf50,#2e7d32)",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:12}}>Giriş</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
