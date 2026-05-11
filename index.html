@@ -129,8 +129,8 @@ const TEACHERS={
 };
 
 const ADMIN_KEY="linguaai_admin";
-const getAdmin=()=>{try{const s=sessionStorage.getItem(ADMIN_KEY);return s?JSON.parse(s):{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}catch{return{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}};
-const saveAdmin=(s)=>{try{sessionStorage.setItem(ADMIN_KEY,JSON.stringify(s))}catch{}};
+const getAdmin=()=>{try{const s=localStorage.getItem(ADMIN_KEY);return s?JSON.parse(s):{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}catch{return{iban:"",bankName:"",accountName:"",contactEmail:"",adminPassword:"admin123",users:[],pendingPayments:[]}}};
+const saveAdmin=(s)=>{try{localStorage.setItem(ADMIN_KEY,JSON.stringify(s))}catch{}};
 
 // Hoca kartı - profesyonel, fotoğrafsız
 function TeacherAvatar({teacher,lang,size=64}){
@@ -935,4 +935,3 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
-
