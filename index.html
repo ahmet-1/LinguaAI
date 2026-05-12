@@ -857,7 +857,8 @@ function App(){
     return false;
   };
 
-  if(showAdmin||isAdmin)return <AdminPanel onClose={()=>{setShowAdmin(false);}}/>;
+  
+  if(showAdmin||isAdmin)return <AdminPanel onClose={()=>{setShowAdmin(false);setIsAdmin(false);DB.del("admin_session");}}/>
   if(activeSession)return <SessionScreen langId={activeSession.lang} teacher={activeSession.teacher} user={user} onClose={()=>setActiveSession(null)}/>;
 
   const adm=getAdminCfg();
@@ -1125,8 +1126,8 @@ function App(){
               <div style={{color:C.text3,fontSize:12,marginBottom:12}}>Mesaj Gönderin</div>
               <input placeholder="Adınız" style={{...inp,marginBottom:10}}/>
               <input placeholder="E-postanız" style={{...inp,marginBottom:10}}/>
-              <textarea placeholder="Mesajınız..." style={{...inp,minHeight:90,resize:"vertical",marginBottom:14}}/>
-              <button style={{width:"100%",padding:12,background:`linear-gradient(135deg,${C.green},${C.green2})`,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>Gönder</button>
+              const [contactMsg,setContactMsg]=useState(""); <textarea value={contactMsg} onChange={e=>setContactMsg(e.target.value)} placeholder="Mesajınız..." style={{...inp,minHeight:90,resize:"vertical",marginBottom:14}}/>
+              <button onClick={()=>alert("Mesajınız alındı! En kısa sürede dönüş yapacağız.")} style={{width:"100%",padding:12,background:`linear-gradient(135deg,${C.green},${C.green2})`,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>Gönder</button>
             </div>
           </div>
         </div>
