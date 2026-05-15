@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 /* ─────────────────────────────────────────────
    RENK PALETİ — Orman Yeşili + Petrol Mavisi
 ───────────────────────────────────────────── */
 const K = {
-  bg:    "#071512", bg2:   "#0a1e14", bg3:   "#0d2618",
-  card:  "#0f2c1c", card2: "#122f1f",
-  bdr:   "#1a4028", bdr2:  "#1f5030", bdr3:  "#266040",
+  bg:"#071512", bg2:"#0a1e14", bg3:"#0d2618",
+  card:"#0f2c1c", card2:"#122f1f",
+  bdr:"#1a4028", bdr2:"#1f5030", bdr3:"#266040",
   g1:"#1b5e20", g2:"#2e7d32", g3:"#388e3c", g4:"#43a047", gL:"#66bb6a",
   t1:"#004d40", t2:"#00695c", t3:"#00897b", tL:"#26a69a",
   tx:"#e8f5e9", tx2:"#a5d6a7", tx3:"#6a9e74", tx4:"#3d6b47",
@@ -14,15 +14,30 @@ const K = {
 };
 
 /* ─────────────────────────────────────────────
-   KALICI VERİTABANI
+   KALICI VERİTABANI — window.storage API
 ───────────────────────────────────────────── */
 const DB = {
-  g: k => { try { const v = localStorage.getItem("la_"+k); return v?JSON.parse(v):null; } catch { return null; } },
-  s: (k,v) => { try { localStorage.setItem("la_"+k, JSON.stringify(v)); } catch {} },
-  d: k => { try { localStorage.removeItem("la_"+k); } catch {} },
+  g: async (k) => {
+    try {
+      const r = await window.storage.get("la_" + k);
+      return r ? JSON.parse(r.value) : null;
+    } catch { return null; }
+  },
+  s: async (k, v) => {
+    try { await window.storage.set("la_" + k, JSON.stringify(v)); } catch {}
+  },
+  d: async (k) => {
+    try { await window.storage.delete("la_" + k); } catch {}
+  },
 };
-const getA = () => DB.g("adm") || { pw:"admin123", email:"", contactEmail:"", iban:"", bank:"", acName:"", users:[], pays:[] };
-const setA = d => DB.s("adm", d);
+
+const defaultAdmin = { pw:"admin123", email:"", contactEmail:"", iban:"", bank:"", acName:"", users:[], pays:[] };
+
+const getA = async () => {
+  const v = await DB.g("adm");
+  return v || defaultAdmin;
+};
+const setA = async (d) => { await DB.s("adm", d); };
 
 /* ─────────────────────────────────────────────
    DİLLER & HOCALAR
@@ -155,6 +170,7 @@ function AuthModal({ ilkMod, kapat, basari }) {
   const [hatalar, setH]   = useState({});
   const [tamam, setTamam] = useState(false);
   const [mesaj, setMesaj] = useState("");
+  const [yukleniyor, setYukl] = useState(false);
 
   const f = (k, tip="text", yer="") => (
     <div style={{marginBottom:12}}>
@@ -167,18 +183,20 @@ function AuthModal({ ilkMod, kapat, basari }) {
     </div>
   );
 
-  const girisYap = () => {
+  const girisYap = async () => {
     const h={};
     if(!form.email) h.email="E-posta gerekli";
     if(!form.sifre) h.sifre="Şifre gerekli";
     if(Object.keys(h).length){setH(h);return;}
-    const a=getA();
-    const u=(a.users||[]).find(x=>x.email.toLowerCase()===form.email.toLowerCase()&&x.pw===form.sifre);
+    setYukl(true);
+    const a = await getA();
+    const u = (a.users||[]).find(x=>x.email.toLowerCase()===form.email.toLowerCase()&&x.pw===form.sifre);
+    setYukl(false);
     if(!u){setH({sifre:"E-posta veya şifre hatalı"});return;}
-    basari(getA().users.find(x=>x.id===u.id)||u);
+    basari(u);
   };
 
-  const kayitOl = () => {
+  const kayitOl = async () => {
     const h={};
     if(!form.ad.trim())    h.ad="Zorunlu";
     if(!form.email.includes("@")) h.email="Geçerli e-posta girin";
@@ -190,8 +208,10 @@ function AuthModal({ ilkMod, kapat, basari }) {
     if(form.sifre!==form.sifre2) h.sifre2="Şifreler eşleşmiyor";
     if(!form.onay)         h.onay="Onay zorunlu";
     if(Object.keys(h).length){setH(h);return;}
-    const a=getA();
+    setYukl(true);
+    const a = await getA();
     if((a.users||[]).find(x=>x.email.toLowerCase()===form.email.toLowerCase())){
+      setYukl(false);
       setH({email:"Bu e-posta zaten kayıtlı"}); return;
     }
     const yeni={
@@ -201,7 +221,8 @@ function AuthModal({ ilkMod, kapat, basari }) {
       tarih:new Date().toLocaleDateString("tr-TR"),
       odeme:"₺0", trialStart:Date.now(), hediye:false,
     };
-    setA({...a,users:[...(a.users||[]),yeni]});
+    await setA({...a,users:[...(a.users||[]),yeni]});
+    setYukl(false);
     setTamam(true);
     basari(yeni);
   };
@@ -225,15 +246,14 @@ function AuthModal({ ilkMod, kapat, basari }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
           {mod!=="unuttu" && (
             <div style={{display:"flex",gap:6,flex:1}}>
-              <button style={tabSt(mod==="giris")}    onClick={()=>{setMod("giris");setH({});setMesaj("");}}>Giriş Yap</button>
-              <button style={tabSt(mod==="kayit")}    onClick={()=>{setMod("kayit");setH({});setTamam(false);}}>Üye Ol</button>
+              <button style={tabSt(mod==="giris")} onClick={()=>{setMod("giris");setH({});setMesaj("");}}>Giriş Yap</button>
+              <button style={tabSt(mod==="kayit")} onClick={()=>{setMod("kayit");setH({});setTamam(false);}}>Üye Ol</button>
             </div>
           )}
           {mod==="unuttu" && <div style={{color:K.tx,fontSize:16,fontWeight:700}}>Şifremi Unuttum</div>}
           <button onClick={kapat} style={{background:"none",border:"none",color:K.tx3,fontSize:22,cursor:"pointer",marginLeft:8}}>✕</button>
         </div>
 
-        {/* GİRİŞ */}
         {mod==="giris" && <>
           <div style={{color:K.tx3,fontSize:11,marginBottom:4}}>E-posta</div>
           {f("email","email","ornek@mail.com")}
@@ -242,13 +262,14 @@ function AuthModal({ ilkMod, kapat, basari }) {
           <div style={{textAlign:"right",marginBottom:14}}>
             <button style={linkSt} onClick={()=>{setMod("unuttu");setH({});setMesaj("");}}>Şifremi Unuttum</button>
           </div>
-          <button style={btnSt} onClick={girisYap}>Giriş Yap</button>
+          <button style={{...btnSt,opacity:yukleniyor?0.7:1}} onClick={girisYap} disabled={yukleniyor}>
+            {yukleniyor?"Giriş yapılıyor...":"Giriş Yap"}
+          </button>
           <div style={{textAlign:"center",color:K.tx3,fontSize:12}}>
             Hesabın yok mu? <button style={linkSt} onClick={()=>{setMod("kayit");setH({});setTamam(false);}}>Üye Ol</button>
           </div>
         </>}
 
-        {/* KAYIT */}
         {mod==="kayit" && (tamam ? (
           <div style={{textAlign:"center",padding:"16px 0"}}>
             <div style={{fontSize:56,marginBottom:12}}>🎉</div>
@@ -275,13 +296,14 @@ function AuthModal({ ilkMod, kapat, basari }) {
             </label>
             {hatalar.onay && <div style={{color:K.errL,fontSize:10,marginTop:4}}>{hatalar.onay}</div>}
           </div>
-          <button style={btnSt} onClick={kayitOl}>Kayıt Ol →</button>
+          <button style={{...btnSt,opacity:yukleniyor?0.7:1}} onClick={kayitOl} disabled={yukleniyor}>
+            {yukleniyor?"Kaydediliyor...":"Kayıt Ol →"}
+          </button>
           <div style={{textAlign:"center",color:K.tx3,fontSize:12}}>
             Zaten hesabın var mı? <button style={linkSt} onClick={()=>{setMod("giris");setH({});}}>Giriş Yap</button>
           </div>
         </>)}
 
-        {/* ŞİFREMİ UNUTTUM */}
         {mod==="unuttu" && (mesaj ? (
           <div style={{textAlign:"center",padding:"16px 0"}}>
             <div style={{fontSize:50,marginBottom:12}}>📧</div>
@@ -310,20 +332,21 @@ function AuthModal({ ilkMod, kapat, basari }) {
 ───────────────────────────────────────────── */
 function DersEkrani({ dilId, hoca, kullanici, kapat }) {
   const dil = DILLER.find(d=>d.id===dilId);
-  const [mesajlar, setM]  = useState([]);
-  const [yazi, setY]      = useState("");
-  const [yukl, setYukl]   = useState(false);
-  const [mikr, setMikr]   = useState(false);
-  const [mikErr, setMikErr]= useState("");
-  const [sure, setSure]   = useState(kullanici?.plan==="Deneme"?1200:0);
-  const sonRef = useRef(null);
-  const recRef = useRef(null);
+  const [mesajlar, setM]   = useState([]);
+  const [yazi, setY]       = useState("");
+  const [yukl, setYukl]    = useState(false);
+  const [mikr, setMikr]    = useState(false);
+  const [mikErr, setMikErr] = useState("");
+  const [sure, setSure]    = useState(kullanici?.plan==="Deneme"?1200:0);
+  const sonRef  = useRef(null);
+  const recRef  = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(()=>{
-    setM([{tip:"ai",tx:`Merhaba ${kullanici?.ad?.split(" ")[0]||""}! Ben ${hoca.ad}, ${hoca.yer} kökenli AI öğretmenin.\n\nUzmanlık: ${hoca.uz}\n\nYazarak veya 🎤 butonuna basarak sesli konuşabilirsin. Başlayalım!`}]);
-    if(kullanici?.plan==="Deneme"){
-      const t=setInterval(()=>setSure(s=>{if(s<=1){clearInterval(t);return 0;}return s-1;}),1000);
-      return()=>clearInterval(t);
+    setM([{tip:"ai",tx:`Merhaba ${kullanici?.ad?.split(" ")[0]||""}! Ben ${hoca.ad}, ${hoca.yer} kökenli AI dil öğretmenin.\n\nUzmanlık: ${hoca.uz}\n\nYazarak veya 🎤 butonuna basılı tutarak sesli konuşabilirsin. Başlayalım!`}]);
+    if(kullanici?.plan==="Deneme"&&kullanici?.durum==="Deneme"){
+      timerRef.current = setInterval(()=>setSure(s=>{if(s<=1){clearInterval(timerRef.current);return 0;}return s-1;}),1000);
+      return()=>clearInterval(timerRef.current);
     }
   },[]);
 
@@ -346,7 +369,7 @@ function DersEkrani({ dilId, hoca, kullanici, kapat }) {
   const mikBirak = ()=>{try{recRef.current?.stop();}catch{}setMikr(false);};
 
   const gonder = async()=>{
-    if(!yazi.trim()||yukl)return;
+    if(!yazi.trim()||yukl) return;
     const txt=yazi.trim(); setY(""); setYukl(true);
     setM(m=>[...m,{tip:"user",tx:txt}]);
     try{
@@ -354,7 +377,7 @@ function DersEkrani({ dilId, hoca, kullanici, kapat }) {
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-sonnet-4-20250514",max_tokens:800,
-          system:`Sen ${hoca.ad} adlı AI dil öğretmenisin. ${hoca.yer} kökenlisin. ${dil.ad} dersi veriyorsun. Uzmanlık: ${hoca.uz}. Türkçe yanıt ver ve ${dil.yerel} dilinde örnekler ekle. Sıcak, sabırlı ve motive edici ol. Hataları nazikçe düzelt. Maksimum 3 paragraf.`,
+          system:`Sen ${hoca.ad} adlı bir dil öğretmenisin. ${hoca.yer} kökenlisin. ${dil.ad} dersi veriyorsun. Uzmanlık: ${hoca.uz}. Türkçe yanıt ver ve ${dil.yerel} dilinde örnekler ekle. Sıcak, sabırlı ve motive edici ol. Hataları nazikçe düzelt. Maksimum 3 paragraf. Sen bir dil öğretmenisin, çevirmen değilsin.`,
           messages:[...mesajlar.filter(m=>m.tip).map(m=>({role:m.tip==="ai"?"assistant":"user",content:m.tx})),{role:"user",content:txt}]
         })
       });
@@ -496,13 +519,29 @@ function DersEkrani({ dilId, hoca, kullanici, kapat }) {
 ───────────────────────────────────────────── */
 function AdminPaneli({ kapat }) {
   const [sekme, setSekme]   = useState("dash");
-  const [ayar, setAyar]     = useState(getA());
+  const [ayar, setAyar]     = useState(null);
   const [kayd, setKayd]     = useState(false);
   const [hE,setHE]=useState(""); const [hT,setHT]=useState("7 Gün"); const [hOk,setHOk]=useState(false); const [hErr,setHErr]=useState("");
   const [p1,setP1]=useState(""); const [p2,setP2]=useState(""); const [pMsg,setPMsg]=useState("");
   const [izle,setIzle]=useState(null);
+  const [yukl,setYukl]=useState(true);
 
-  const kaydet = y => { setAyar(y); setA(y); setKayd(true); setTimeout(()=>setKayd(false),2000); };
+  useEffect(()=>{
+    getA().then(a=>{ setAyar(a); setYukl(false); });
+  },[]);
+
+  const kaydet = async (y) => {
+    setAyar(y);
+    await setA(y);
+    setKayd(true);
+    setTimeout(()=>setKayd(false),2000);
+  };
+
+  if(yukl||!ayar) return (
+    <div style={{position:"fixed",inset:0,background:K.bg,display:"flex",alignItems:"center",justifyContent:"center",zIndex:7000}}>
+      <div style={{color:K.gL,fontSize:16}}>Yükleniyor...</div>
+    </div>
+  );
 
   const kullar = ayar.users||[];
   const odemeler = ayar.pays||[];
@@ -512,15 +551,16 @@ function AdminPaneli({ kapat }) {
   const bekleyen = odemeler.filter(o=>o.d==="bekle").length;
   const gelir = kullar.reduce((t,u)=>{const n=parseInt((u.odeme||"0").replace(/[^0-9]/g,""));return t+(isNaN(n)?0:n);},0);
 
-  const onayOde = id=>{
+  const onayOde = (id) => {
     const o=odemeler.find(x=>x.id===id); if(!o)return;
-    kaydet({...ayar,
+    const yeniAyar = {...ayar,
       pays:odemeler.map(x=>x.id===id?{...x,d:"ok"}:x),
-      users:kullar.map(u=>u.email===o.email?{...u,plan:o.plan,durum:"Aktif",odeme:`₺${parseInt((u.odeme||"0").replace(/[^0-9]/g,""))+(o.tutar||299)}`}:u)
-    });
+      users:kullar.map(u=>u.email===o.email?{...u,plan:o.plan,durum:"Aktif",odeme:`₺${(parseInt((u.odeme||"0").replace(/[^0-9]/g,""))||0)+(o.tutar||299)}`}:u)
+    };
+    kaydet(yeniAyar);
   };
 
-  const hediyeGonder = ()=>{
+  const hediyeGonder = () => {
     if(!hE.includes("@")){setHErr("Geçerli e-posta girin");return;}
     const u=kullar.find(x=>x.email===hE);
     if(!u){setHErr("Bu e-posta kayıtlı kullanıcılarda yok");return;}
@@ -528,7 +568,7 @@ function AdminPaneli({ kapat }) {
     setHOk(true);
   };
 
-  const sifreDegis = ()=>{
+  const sifreDegis = () => {
     if(p1.length<6){setPMsg("En az 6 karakter");return;}
     if(p1!==p2){setPMsg("Şifreler eşleşmiyor");return;}
     kaydet({...ayar,pw:p1}); setPMsg("✅ Şifre güncellendi!"); setP1(""); setP2("");
@@ -751,7 +791,7 @@ function AdminPaneli({ kapat }) {
               <button onClick={sifreDegis} style={{padding:"9px 18px",background:`rgba(46,125,50,0.15)`,color:K.gL,border:`1px solid ${K.g1}55`,borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:12}}>Şifreyi Güncelle</button>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:14}}>
-              <button onClick={()=>kaydet(ayar)} style={{...bG,padding:"13px 28px",fontSize:15}}>💾 Tüm Ayarları Kaydet</button>
+              <button onClick={()=>kaydet(ayar)} style={{padding:"13px 28px",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:15,border:"none",background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff"}}>💾 Tüm Ayarları Kaydet</button>
               {kayd&&<div style={{color:K.gL,fontSize:13,fontWeight:600}}>✅ Kaydedildi!</div>}
             </div>
           </div>
@@ -766,46 +806,110 @@ function AdminPaneli({ kapat }) {
    ANA UYGULAMA
 ───────────────────────────────────────────── */
 export default function App() {
-  const [kullanici,   setKul]  = useState(()=>DB.g("kul"));
-  const [adminGiris,  setAdG]  = useState(()=>DB.g("adGiris")===true);
-  const [adminAcik,   setAdA]  = useState(false);
-  const [sayfa,       setSayfa]= useState("ana");
-  const [dilSec,      setDS]   = useState(null);
-  const [cocukMod,    setCM]   = useState(false);
-  const [ders,        setDers] = useState(null);
-  const [authAcik,    setAuth] = useState(false);
-  const [authMod,     setAMod] = useState("giris");
-  const [adminModal,  setAMod2]= useState(false);
-  const [adminSifre,  setAS]   = useState("");
-  const [adminHata,   setAH]   = useState("");
-  const [odemePlan,   setOP]   = useState(null);
+  const [yukl,      setYukl]  = useState(true);
+  const [kullanici, setKul]   = useState(null);
+  const [adminGiris,setAdG]   = useState(false);
+  const [adminAcik, setAdA]   = useState(false);
+  const [sayfa,     setSayfa] = useState("ana");
+  const [dilSec,    setDS]    = useState(null);
+  const [cocukMod,  setCM]    = useState(false);
+  const [ders,      setDers]  = useState(null);
+  const [authAcik,  setAuth]  = useState(false);
+  const [authMod,   setAMod]  = useState("giris");
+  const [adminModal,setAMod2] = useState(false);
+  const [adminSifre,setAS]    = useState("");
+  const [adminHata, setAH]    = useState("");
+  const [odemePlan, setOP]    = useState(null);
+  const [adm,       setAdmData] = useState(defaultAdmin);
 
-  const kulGiris  = u => { setKul(u); DB.s("kul",u); };
-  const kulCikis  = () => { setKul(null); DB.d("kul"); };
-  const admGiris  = () => {
-    const a=getA();
-    if(adminSifre===a.pw){setAdG(true);DB.s("adGiris",true);setAdA(true);setAMod2(false);setAS("");setAH("");}
-    else setAH("Yanlış şifre");
+  /* Başlangıçta storage'dan yükle */
+  useEffect(()=>{
+    const yukle = async () => {
+      const kul = await DB.g("kul");
+      const adGir = await DB.g("adGiris");
+      const admData = await getA();
+      if(kul) setKul(kul);
+      if(adGir===true) setAdG(true);
+      setAdmData(admData);
+      setYukl(false);
+    };
+    yukle();
+  },[]);
+
+  /* adm verisini periyodik güncelle */
+  useEffect(()=>{
+    if(yukl) return;
+    const interval = setInterval(async()=>{
+      const a = await getA();
+      setAdmData(a);
+    }, 2000);
+    return ()=>clearInterval(interval);
+  },[yukl]);
+
+  const kulGiris  = async (u) => { setKul(u); await DB.s("kul",u); };
+  const kulCikis  = async () => { setKul(null); await DB.d("kul"); };
+
+  const admGiris  = async () => {
+    const a = await getA();
+    if(adminSifre===a.pw){
+      setAdG(true);
+      await DB.s("adGiris",true);
+      setAdA(true);
+      setAMod2(false);
+      setAS("");
+      setAH("");
+    } else {
+      setAH("Yanlış şifre");
+    }
   };
-  const admCikis  = () => { setAdG(false); DB.d("adGiris"); setAdA(false); };
+
+  const admCikis = async () => {
+    setAdG(false);
+    await DB.d("adGiris");
+    setAdA(false);
+  };
 
   const dersGirebilir = () => {
-    if(DB.g("adGiris")===true||adminGiris) return true;
+    if(adminGiris) return true;
     if(!kullanici) return false;
     if(kullanici.durum==="Aktif") return true;
     if(kullanici.durum==="Deneme") return (Date.now()-kullanici.trialStart)/(1000*60*60*24)<5;
     return false;
   };
 
-  const git = s => { setSayfa(s); setDS(null); };
-  const adm = getA();
+  const git = (s) => { setSayfa(s); setDS(null); };
 
-  if(adminAcik||adminGiris) return <AdminPaneli kapat={()=>{setAdA(false);}}/>;
+  if(yukl) return (
+    <div style={{minHeight:"100vh",background:K.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:56,height:56,borderRadius:14,background:`linear-gradient(135deg,${K.g4},${K.t3})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:28,margin:"0 auto 16px"}}>L</div>
+        <div style={{color:K.gL,fontSize:14}}>Yükleniyor...</div>
+      </div>
+    </div>
+  );
+
+  if(adminAcik) return <AdminPaneli kapat={()=>setAdA(false)}/>;
   if(ders) return <DersEkrani dilId={ders.dil} hoca={ders.hoca} kullanici={ders.kul||kullanici} kapat={()=>setDers(null)}/>;
 
   const bP = {padding:"13px 28px",background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:14,boxShadow:`0 4px 20px ${K.g2}55`};
   const bS = {padding:"13px 28px",background:"transparent",color:K.tx2,border:`1px solid ${K.bdr}`,borderRadius:12,cursor:"pointer",fontWeight:600,fontSize:14};
   const gI2 = {width:"100%",padding:"11px 13px",background:K.bg3,border:`1px solid ${K.bdr}`,borderRadius:9,color:K.tx,fontSize:13,outline:"none",boxSizing:"border-box"};
+
+  const hocaDersBasla = (h, dilSec) => {
+    if(!kullanici && !adminGiris) {
+      setAMod("kayit");
+      setAuth(true);
+      return;
+    }
+    if(!dersGirebilir()) {
+      setOP({id:"up",ad:"Premium Üyelik",fiyat:"₺299",donem:"/ay",tutar:299});
+      return;
+    }
+    const k = adminGiris
+      ? {id:"admin",ad:"Admin",plan:"Sınırsız",durum:"Aktif",trialStart:0}
+      : kullanici;
+    setDers({dil:dilSec.id, hoca:h, kul:k});
+  };
 
   return (
     <div style={{minHeight:"100vh",background:`linear-gradient(170deg,${K.bg},${K.bg2} 50%,${K.bg})`,fontFamily:`'Segoe UI',system-ui,sans-serif`}}>
@@ -823,6 +927,7 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>git("ana")}>
           <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${K.g4},${K.t3})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:18,boxShadow:`0 2px 14px ${K.g2}66`}}>L</div>
           <span style={{fontSize:20,fontWeight:900,color:K.tx}}>Lingua</span><span style={{fontSize:20,fontWeight:900,color:K.gL}}>AI</span>
+          <span style={{marginLeft:6,background:`rgba(46,125,50,0.15)`,border:`1px solid ${K.g1}44`,borderRadius:5,padding:"1px 7px",fontSize:9,color:K.gL,fontWeight:700}}>DİL ÖĞRENME</span>
         </div>
 
         <div style={{display:"flex",gap:3}}>
@@ -832,6 +937,11 @@ export default function App() {
         </div>
 
         <div style={{display:"flex",gap:7,alignItems:"center"}}>
+          {adminGiris && (
+            <div style={{background:`rgba(249,168,37,0.12)`,borderRadius:8,padding:"6px 13px",fontSize:12,color:K.warn,fontWeight:700,border:`1px solid ${K.warn}44`}}>
+              ⚙ Admin
+            </div>
+          )}
           {kullanici ? (
             <>
               <div style={{background:`rgba(46,125,50,0.12)`,borderRadius:8,padding:"6px 13px",fontSize:12,color:K.gL,fontWeight:600,border:`1px solid ${K.g1}44`}}>
@@ -846,7 +956,11 @@ export default function App() {
               <button onClick={()=>{setAMod("kayit");setAuth(true);}} style={{padding:"7px 16px",borderRadius:8,background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>Üye Ol</button>
             </>
           )}
-          <button onClick={()=>{setAMod2(true);setAH("");setAS("");}} style={{padding:"6px 9px",borderRadius:8,border:`1px solid ${K.bdr}`,background:"transparent",color:K.tx4,cursor:"pointer",fontSize:10}}>⚙</button>
+          {adminGiris ? (
+            <button onClick={()=>setAdA(true)} style={{padding:"6px 11px",borderRadius:8,border:`1px solid ${K.warn}44`,background:`rgba(249,168,37,0.1)`,color:K.warn,cursor:"pointer",fontSize:11,fontWeight:700}}>Panel</button>
+          ) : (
+            <button onClick={()=>{setAMod2(true);setAH("");setAS("");}} style={{padding:"6px 9px",borderRadius:8,border:`1px solid ${K.bdr}`,background:"transparent",color:K.tx4,cursor:"pointer",fontSize:10}}>⚙</button>
+          )}
         </div>
       </nav>
 
@@ -862,9 +976,9 @@ export default function App() {
               AI Hocanla<br/>
               <span style={{background:`linear-gradient(90deg,${K.gL},${K.tL})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>10 Dil Öğren</span>
             </h1>
-            <p style={{fontSize:15,color:K.tx3,maxWidth:440,margin:"0 auto 30px",lineHeight:1.8}}>Yaz veya mikrofona bas, AI hocanla birebir ders yap.<br/>Kameralı özellik yakında güncellemeyle geliyor!</p>
+            <p style={{fontSize:15,color:K.tx3,maxWidth:440,margin:"0 auto 30px",lineHeight:1.8}}>Yaz veya mikrofona bas, AI hocanla birebir dil dersi al.<br/>Kameralı özellik yakında güncellemeyle geliyor!</p>
             <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
-              <button style={bP} onClick={()=>{if(kullanici)git("diller");else{setAMod("kayit");setAuth(true);}}}>Ücretsiz Başla →</button>
+              <button style={bP} onClick={()=>{if(kullanici||adminGiris)git("diller");else{setAMod("kayit");setAuth(true);}}}>Ücretsiz Başla →</button>
               <button style={bS} onClick={()=>git("fiyatlar")}>Fiyatlar</button>
             </div>
           </div>
@@ -962,12 +1076,7 @@ export default function App() {
                 style={{background:K.card,borderRadius:16,padding:18,border:`1px solid ${K.bdr}`,textAlign:"center",cursor:"pointer",transition:"all 0.2s"}}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor=dilSec.vurgu;e.currentTarget.style.transform="translateY(-2px)";}}
                 onMouseLeave={e=>{e.currentTarget.style.borderColor=K.bdr;e.currentTarget.style.transform="translateY(0)";}}
-                onClick={()=>{
-                  if(!kullanici&&!adminGiris){setAMod("kayit");setAuth(true);return;}
-                  if(!dersGirebilir()){setOP({id:"up",ad:"Premium Üyelik",fiyat:"₺299",donem:"/ay",tutar:299});return;}
-                  const k=adminGiris?{id:"admin",ad:"Admin",plan:"Sınırsız",durum:"Aktif",trialStart:0}:kullanici;
-                  setDers({dil:dilSec.id,hoca:h,kul:k});
-                }}>
+                onClick={()=>hocaDersBasla(h, dilSec)}>
                 <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Av h={h} dil={dilSec} sz={80}/></div>
                 {h.c&&<div style={{background:`rgba(249,168,37,0.12)`,color:K.warn,borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700,marginBottom:8,display:"inline-block",border:`1px solid ${K.warn}33`}}>👶 Çocuklara Özel</div>}
                 <div style={{fontWeight:700,fontSize:14,marginBottom:3,color:K.tx}}>{h.ad}</div>
@@ -977,7 +1086,9 @@ export default function App() {
                   <span style={{color:dilSec.vurgu,fontSize:12,fontWeight:600}}>⭐ {h.p}</span>
                   <span style={{color:K.tx4,fontSize:11}}>{h.n.toLocaleString()}</span>
                 </div>
-                <button style={{width:"100%",padding:"9px",borderRadius:9,background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                <button
+                  onClick={e=>{e.stopPropagation();hocaDersBasla(h, dilSec);}}
+                  style={{width:"100%",padding:"9px",borderRadius:9,background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff",border:"none",cursor:"pointer",fontWeight:700,fontSize:12}}>
                   🎤 Derse Başla
                 </button>
               </div>
@@ -1006,8 +1117,13 @@ export default function App() {
                 <div style={{marginBottom:18}}><span style={{fontSize:34,fontWeight:900,color:p.hl?K.gL:K.tx}}>{p.fiyat}</span><span style={{color:K.tx4,fontSize:13}}>{p.donem}</span></div>
                 {p.oz.map(o=><div key={o} style={{display:"flex",gap:7,marginBottom:7,textAlign:"left"}}><span style={{color:K.gL,fontWeight:700}}>✓</span><span style={{color:K.tx3,fontSize:12}}>{o}</span></div>)}
                 <button onClick={()=>{
-                  if(p.id==="d"){if(kullanici)git("diller");else{setAMod("kayit");setAuth(true);}}
-                  else{if(!kullanici){setAMod("kayit");setAuth(true);}else setOP(p);}
+                  if(p.id==="d"){
+                    if(kullanici||adminGiris) git("diller");
+                    else{setAMod("kayit");setAuth(true);}
+                  } else {
+                    if(!kullanici){setAMod("kayit");setAuth(true);}
+                    else setOP(p);
+                  }
                 }} style={{width:"100%",marginTop:18,padding:11,borderRadius:10,fontWeight:700,fontSize:13,cursor:"pointer",
                   background:p.hl?`linear-gradient(135deg,${K.g2},${K.t2})`:p.id==="d"?"transparent":K.bg3,
                   color:p.hl?"#fff":K.tx2,border:p.id==="d"?`1px solid ${K.g2}`:p.hl?"none":`1px solid ${K.bdr}`}}>
@@ -1035,7 +1151,7 @@ export default function App() {
           <p style={{color:K.tx4,marginBottom:26,fontSize:14}}>Sorularınız için bize ulaşın</p>
           <div style={{background:K.card,borderRadius:16,padding:24,border:`1px solid ${K.bdr}`}}>
             {adm.contactEmail&&<div style={{marginBottom:20}}><div style={{color:K.tx4,fontSize:12,marginBottom:6}}>E-posta</div><a href={`mailto:${adm.contactEmail}`} style={{color:K.gL,fontSize:17,fontWeight:700,textDecoration:"none"}}>{adm.contactEmail}</a></div>}
-            <div style={{borderTop:`1px solid ${K.bdr}`,paddingTop:18}}>
+            <div style={{borderTop:adm.contactEmail?`1px solid ${K.bdr}`:"none",paddingTop:adm.contactEmail?18:0}}>
               <div style={{color:K.tx4,fontSize:12,marginBottom:12}}>Mesaj Gönderin</div>
               <input placeholder="Adınız" style={{...gI2,marginBottom:10}}/>
               <input placeholder="E-postanız" type="email" style={{...gI2,marginBottom:10}}/>
@@ -1050,10 +1166,9 @@ export default function App() {
       )}
 
       {/* MODALLER */}
-
       {authAcik&&(
         <AuthModal ilkMod={authMod} kapat={()=>setAuth(false)}
-          basari={u=>{kulGiris(u);setAuth(false);git("diller");}}/>
+          basari={async (u)=>{await kulGiris(u);setAuth(false);git("diller");}}/>
       )}
 
       {odemePlan&&(
@@ -1072,10 +1187,10 @@ export default function App() {
                 </div>
               </div>
             ):<div style={{color:K.tx4,fontSize:13,marginBottom:14,padding:14,background:K.bg3,borderRadius:10}}>IBAN henüz girilmemiş. Bize e-posta gönderin.</div>}
-            <button onClick={()=>{
-              const a=getA();
+            <button onClick={async ()=>{
+              const a = await getA();
               const ny={id:Date.now(),ad:kullanici?.ad||"",email:kullanici?.email||"",tutar:odemePlan.tutar||0,plan:odemePlan.ad,tarih:new Date().toLocaleDateString("tr-TR"),d:"bekle"};
-              setA({...a,pays:[...(a.pays||[]),ny]});
+              await setA({...a,pays:[...(a.pays||[]),ny]});
               alert("Bildiriminiz alındı! Admin onayladıktan sonra üyeliğiniz aktifleşecektir.");
               setOP(null);
             }} style={{width:"100%",padding:12,background:`linear-gradient(135deg,${K.g2},${K.t2})`,color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:13}}>
@@ -1092,6 +1207,7 @@ export default function App() {
               <div style={{color:K.tx,fontSize:15,fontWeight:700}}>Yönetici Girişi</div>
               <button onClick={()=>{setAMod2(false);setAH("");setAS("");}} style={{background:"none",border:"none",color:K.tx4,fontSize:18,cursor:"pointer"}}>✕</button>
             </div>
+            <div style={{color:K.tx4,fontSize:11,marginBottom:10}}>Varsayılan şifre: admin123</div>
             <input type="password" value={adminSifre} placeholder="Yönetici şifresi"
               onChange={e=>{setAS(e.target.value);setAH("");}}
               onKeyDown={e=>e.key==="Enter"&&admGiris()}
