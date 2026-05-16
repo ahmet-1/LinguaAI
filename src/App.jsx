@@ -1,3 +1,4 @@
+import emailjs from 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm';
 import { useState, useRef, useEffect } from "react";
 
 /* ─────────────────────────────────────────────
@@ -1413,11 +1414,21 @@ export default function App() {
                       return;
                     }
                     // Mesajı localStorage'a kaydet
-                    const a=getA();
-                    const mesajlar=a.iletisimMesajlari||[];
-                    mesajlar.push({...iFm,tarih:new Date().toLocaleString("tr-TR"),okundu:false});
-                    setA({...a,iletisimMesajlari:mesajlar});
-                    setIGon(true);
+                    emailjs.send(
+  "service_6a59xo8",
+  "uaskkei",
+  {
+    name: iFm.ad,
+    email: iFm.email,
+    message: iFm.mesaj,
+    title: "LinguaAI İletişim"
+  },
+  "fxQUQoTWrJ5f61vNe"
+).then(()=>{
+  setIGon(true);
+}).catch(()=>{
+  alert("Mail gönderilemedi, tekrar deneyin.");
+});
                   }}
                   style={{width:"100%",padding:12,background:`linear-gradient(135deg,${K.g2},${K.t2})`,
                     color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>
