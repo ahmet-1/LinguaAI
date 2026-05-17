@@ -1423,9 +1423,7 @@ const mesajGonder = async()=>{
                     placeholder="Mesajınız..."
                     rows={4}
                     style={{...gI2,resize:"vertical"}}/>
-                </div>
-                <button
-                  <button
+                </div><button
   onClick={mesajGonder}
   disabled={iGonderiyor}
   style={{width:"100%",padding:12,background:`linear-gradient(135deg,${K.g2},${K.t2})`,
