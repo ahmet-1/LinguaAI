@@ -984,7 +984,7 @@ export default function App() {
   const [odemePlan,  setOP]   = useState(null);
   const [iFm, setIFm] = useState({ad:"",email:"",mesaj:""});
   const [iGonderildi,setIGon] = useState(false);
-
+  const [iGonderiyor,setIGonderiyor] = useState(false);
   const kulGiris = (u)=>{ setKul(u); DB.s("kul",u); };
   const kulCikis = ()=>{ setKul(null); DB.d("kul"); };
 
@@ -1012,7 +1012,15 @@ export default function App() {
     if(kullanici.durum==="Deneme") return (Date.now()-kullanici.trialStart)/(1000*60*60*24)<5;
     return false;
   };
-
+const mesajGonder = async()=>{
+  if(!iFm.ad.trim()||!iFm.email.includes("@")||!iFm.mesaj.trim()){alert("Lütfen tüm alanları doldurun.");return;}
+  setIGonderiyor(true);
+  try{
+    await emailjs.send("service_6a59xo8","template_1c5xg8q",{name:iFm.ad,email:iFm.email,message:iFm.mesaj,title:"LinguaAI"},"fxQUQoTWrJ5f61vNe");
+    setIGon(true);
+  }catch(e){alert("Mail gönderilemedi, tekrar deneyin.");}
+  setIGonderiyor(false);
+};
   const git = (s)=>{ setSayfa(s); setDS(null); };
   const adm = getA();
 
