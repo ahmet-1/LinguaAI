@@ -1417,32 +1417,14 @@ const mesajGonder = async()=>{
                     style={{...gI2,resize:"vertical"}}/>
                 </div>
                 <button
-                  onClick={()=>{
-                    if(!iFm.ad.trim()||!iFm.email.includes("@")||!iFm.mesaj.trim()){
-                      alert("Lütfen tüm alanları doldurun.");
-                      return;
-                    }
-                    // Mesajı localStorage'a kaydet
-                    emailjs.send(
-  "service_6a59xo8",
-  "uaskkei",
-  {
-    name: iFm.ad,
-    email: iFm.email,
-    message: iFm.mesaj,
-    title: "LinguaAI İletişim"
-  },
-  "fxQUQoTWrJ5f61vNe"
-).then(()=>{
-  setIGon(true);
-}).catch(()=>{
-  alert("Mail gönderilemedi, tekrar deneyin.");
-});
-                  }}
-                  style={{width:"100%",padding:12,background:`linear-gradient(135deg,${K.g2},${K.t2})`,
-                    color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:14}}>
-                  Mesaj Gönder
-                </button>
+                  <button
+  onClick={mesajGonder}
+  disabled={iGonderiyor}
+  style={{width:"100%",padding:12,background:`linear-gradient(135deg,${K.g2},${K.t2})`,
+    color:"#fff",border:"none",borderRadius:10,cursor:iGonderiyor?"not-allowed":"pointer",
+    fontWeight:700,fontSize:14,opacity:iGonderiyor?0.7:1}}>
+  {iGonderiyor?"Gönderiliyor...":"Mesaj Gönder"}
+</button>
               </>
             )}
           </div>
