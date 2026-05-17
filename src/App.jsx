@@ -1097,10 +1097,11 @@ export default function App() {
             </>
           )}
           {adminGiris?(
-            <button onClick={()=>setAdA(true)}
-              style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${K.warn}44`,
-                background:"rgba(249,168,37,0.1)",color:K.warn,cursor:"pointer",fontSize:11,fontWeight:700}}>Panel</button>
-          ):(
+<>
+<button onClick={()=>setAdA(true)} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${K.warn}44`,background:"rgba(249,168,37,0.1)",color:K.warn,cursor:"pointer",fontSize:11,fontWeight:700}}>Panel</button>
+<button onClick={()=>{setAdG(false);DB.d("adGiris");}} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${K.bdr}`,background:"transparent",color:K.tx4,cursor:"pointer",fontSize:11}}>Admin Çıkış</button>
+</>
+):(
             <button onClick={()=>{setAMod2(true);setAH("");setAS("");setAUnuttu(false);setASFM("");}}
               style={{padding:"6px 9px",borderRadius:8,border:`1px solid ${K.bdr}`,
                 background:"transparent",color:K.tx4,cursor:"pointer",fontSize:11}}>⚙</button>
