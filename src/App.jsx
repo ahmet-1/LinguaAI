@@ -1,3 +1,4 @@
+import emailjs from "@emailjs/browser";
 import emailjs from 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/+esm';
 import { useState, useRef, useEffect } from "react";
 
