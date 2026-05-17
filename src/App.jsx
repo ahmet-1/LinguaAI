@@ -1,4 +1,3 @@
-import emailjs from "@emailjs/browser";
 import { useState, useRef, useEffect } from "react";
 
 /* ─────────────────────────────────────────────
@@ -1013,12 +1012,21 @@ export default function App() {
     return false;
   };
 const mesajGonder = async()=>{
-  if(!iFm.ad.trim()||!iFm.email.includes("@")||!iFm.mesaj.trim()){alert("Lütfen tüm alanları doldurun.");return;}
+  if(!iFm.ad.trim()||!iFm.email.includes("@")||!iFm.mesaj.trim()){
+    alert("Lütfen tüm alanları doldurun.");return;
+  }
   setIGonderiyor(true);
   try{
-    await emailjs.send("service_6a59xo8","template_1c5xg8q",{name:iFm.ad,email:iFm.email,message:iFm.mesaj,title:"LinguaAI"},"fxQUQoTWrJ5f61vNe");
-    setIGon(true);
-  }catch(e){alert("Mail gönderilemedi, tekrar deneyin.");}
+    const r=await fetch("https://formspree.io/f/mwvzegkg",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name:iFm.ad,email:iFm.email,message:iFm.mesaj})
+    });
+    if(r.ok) setIGon(true);
+    else alert("Mail gönderilemedi, tekrar deneyin.");
+  }catch(e){
+    alert("Mail gönderilemedi, tekrar deneyin.");
+  }
   setIGonderiyor(false);
 };
   const git = (s)=>{ setSayfa(s); setDS(null); };
