@@ -2656,6 +2656,29 @@ const kulGiris = u => {
             </div>
           </div>
 
+          <div style={{background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:16}}>
+            <div style={{color:K.tx,fontWeight:700,marginBottom:12}}>✏️ Profil Güncelle</div>
+            <input defaultValue={kul?.ad||""} id="pAd" placeholder="Ad Soyad"
+              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
+            <input defaultValue={kul?.tel||""} id="pTel" placeholder="Telefon"
+              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
+            <input type="password" id="pSifre" placeholder="Yeni şifre (boş bırakın değişmesin)"
+              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
+            <button onClick={()=>{
+              const yeniKul={...kul,
+                ad:document.getElementById("pAd").value||kul.ad,
+                tel:document.getElementById("pTel").value||kul.tel,
+                pw:document.getElementById("pSifre").value||kul.pw
+              };
+              setKul(yeniKul); DB.s("kul",yeniKul);
+              fetch("/api/users",{method:"PUT",headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({id:kul.id,ad:yeniKul.ad,tel:yeniKul.tel,pw:yeniKul.pw})
+              }).catch(()=>{});
+              alert("✅ Profil güncellendi!");
+            }} style={{width:"100%",padding:10,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>
+              Kaydet
+            </button>
+          </div>
           <div style={{color:K.tx,fontSize:16,fontWeight:700,marginBottom:12}}>📊 Dil Seviyelerin</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
             {DILLER.map(d=>{
