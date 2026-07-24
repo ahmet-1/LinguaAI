@@ -2112,6 +2112,50 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
         </>}
 
         {sekme==="bil"&&<>
+          <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>🔔 Bildirimler</div>
+          <div style={{background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:16}}>
+            <div style={{color:K.tx,fontWeight:700,marginBottom:10}}>📢 Manuel Bildirim Gönder</div>
+            <select id="bilKul" style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8}}>
+              <option value="">Tüm Kullanıcılar</option>
+              {kullaniciListesi.map(u=><option key={u.id} value={u.email}>{u.ad} ({u.email})</option>)}
+            </select>
+            <textarea id="bilMesaj" placeholder="Mesajınızı yazın..." rows={3}
+              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,resize:"none",boxSizing:"border-box",marginBottom:8}}/>
+            <button onClick={()=>{
+              const hedef=document.getElementById("bilKul").value;
+              const mesaj=document.getElementById("bilMesaj").value;
+              if(!mesaj.trim()){alert("Mesaj yazın!");return;}
+              const a=getA();
+              const yeniBil={id:Date.now(),tip:"manuel",mesaj,tarih:new Date().toLocaleString("tr-TR"),okundu:false};
+              kaydet({...cfg,bildirimler:[...(cfg.bildirimler||[]),yeniBil]});
+              alert("✅ Bildirim gönderildi!");
+              document.getElementById("bilMesaj").value="";
+            }} style={{width:"100%",padding:10,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>
+              Gönder
+            </button>
+          </div>
+          <div style={{color:K.tx,fontWeight:700,marginBottom:10}}>⚠️ Deneme Süreci Bitenler</div>
+          {kullaniciListesi.filter(u=>{
+            if(u.durum!=="Deneme") return false;
+            const ts=parseInt(u.trialStart||u.trial_start||0);
+            const gun=(Date.now()-ts)/86400000;
+            return gun>=4;
+          }).map(u=>(
+            <div key={u.id} style={{...kd,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div>
+                <div style={{color:K.tx,fontWeight:700}}>{u.ad}</div>
+                <div style={{color:K.warn,fontSize:12}}>Deneme süresi bitiyor!</div>
+              </div>
+              <button onClick={()=>{
+                const a=getA();
+                const bil={id:Date.now(),tip:"tesvikTrial",mesaj:u.ad+" - Deneme süreniz bitiyor! Premium üyeliğe geçin.",tarih:new Date().toLocaleString("tr-TR"),okundu:false};
+                kaydet({...cfg,bildirimler:[...(cfg.bildirimler||[]),bil]});
+                alert("Teşvik bildirimi gönderildi: "+u.ad);
+              }} style={{padding:"6px 12px",borderRadius:8,background:"rgba(249,168,37,0.1)",color:K.warn,border:"1px solid "+K.warn+"33",cursor:"pointer",fontSize:12,fontWeight:700}}>
+                📢 Teşvik Gönder
+              </button>
+            </div>
+          ))}
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>Bildirim Gönder</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {[{t:"Premium Teşvik",m:"5 günlük denemeniz bitiyor!"},
