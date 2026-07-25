@@ -417,6 +417,14 @@ kurdish:[
     {id:"kd4",ad:"Heval Demir",yer:"Diyarbakır",uz:"Konuşma Dili",p:4.7,n:390,c:false},
     {id:"kd5",ad:"Ogrt. Berivan Ay",yer:"Mardin",uz:"Cocuklara Kürtçe",p:4.9,n:280,c:true},
     {id:"kd6",ad:"Ogrt. Serhildan Er",yer:"Van",uz:"Cocuk Kürtçesi",p:4.8,n:210,c:true},
+  ],
+  persian:[
+    {id:"p1",ad:"Ustad Reza Tehrani",yer:"Tahran",uz:"Farsça & Edebiyat",p:4.8,n:1200,c:false},
+    {id:"p2",ad:"Dr. Maryam Sadeghi",yer:"İsfahan",uz:"Modern Farsça",p:4.7,n:980,c:false},
+    {id:"p3",ad:"Hafız Kemal",yer:"Şiraz",uz:"Klasik Farsça",p:4.9,n:760,c:false},
+    {id:"p4",ad:"Leyla Ahmadi",yer:"Tebriz",uz:"Günlük Farsça",p:4.6,n:540,c:false},
+    {id:"p5",ad:"Ali Rıza",yer:"Meşhed",uz:"Çocuk Farsçası",p:4.8,n:320,c:true},
+    {id:"p6",ad:"Fatıma Hosseini",yer:"Kum",uz:"Çocuk Farsçası",p:4.7,n:280,c:true}
   ]
 };
 
