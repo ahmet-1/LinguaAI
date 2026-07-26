@@ -2250,7 +2250,7 @@ export default function App() {
   useEffect(()=>{
     // Supabase'den ders geçmişini yükle
     if(kul?.id){
-      fetch("/api/dersler?userId="+kul.id).then(r=>r.json()).then(dersler=>{
+      fetch("/api/dersler?userId="+String(kul.id)).then(r=>r.json()).then(dersler=>{
         if(dersler && dersler.length > 0){
           const gruplu = {};
           dersler.forEach(d=>{
@@ -2633,7 +2633,7 @@ const kulGiris = u => {
       {sayfa==="profil"&&kul&&(() => {
         // Supabase'den dersler yükle
         if(kul?.id) {
-          fetch("/api/dersler?userId="+kul.id).then(r=>r.json()).then(dersler=>{
+          fetch("/api/dersler?userId="+String(kul.id)).then(r=>r.json()).then(dersler=>{
             if(dersler&&dersler.length>0){
               const g={};
               dersler.forEach(d=>{
