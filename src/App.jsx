@@ -1066,7 +1066,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     // sesliMod=true ise hoca konuşur, false ise sadece yazar
     if (sesliModRef.current) {
       const sesDil = dilMod==="hedef" ? dil.mic : "tr-TR";
-      const sesMeyin = temizYan.replace(/[*#_~`]/g,"").replace(/\s+/g," ").trim().substring(0,1500);
+      const sesMeyin = temizYan.replace(/[*#_~`]/g,"").replace(/\s+/g," ").trim().substring(0,3000);
       sesliOku(sesMeyin, hoca.id, sesDil).then(()=>{
         if(konusmaRef.current) setTimeout(mikDinle, 1500);
       }).catch(()=>{
@@ -1129,7 +1129,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         setYazi("");
         if (e.error === "no-speech") {
           // Sessizlik - tekrar dinle
-          if (konusmaRef.current) setTimeout(mikDinle, 1000);
+          if (konusmaRef.current) setTimeout(mikDinle, 2000);
         } else if (e.error === "not-allowed") {
           setMikErr("Mikrofon izni reddedildi. Tarayıcı ayarlarından izin ver.");
           konusmaRef.current = false;
