@@ -789,6 +789,13 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
   // Mesajları otomatik kaydet
   const msgKaydet = (yeniMsgs) => {
+    // Her mesajda Supabase'e kaydet
+    const uid = kul?.id ? String(kul.id) : "admin";
+    if(uid && dilId && hoca?.id && yeniMsgs.length > 0){
+      fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({userId:uid,dilId,hocaId:hoca.id,messages:yeniMsgs.filter(m=>m.r&&m.t)})
+      }).catch(()=>{});
+    }
     setMsgs(yeniMsgs);
     if (DERS_KEY) {
       try { localStorage.setItem(DERS_KEY, JSON.stringify(yeniMsgs.slice(-100))); } catch {}
