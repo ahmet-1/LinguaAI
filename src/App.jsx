@@ -773,8 +773,9 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     } catch { return []; }
   });
 
-  // Supabase'den mesajları yükle
+  // Supabase'den mesajları yükle - dilMod seçilince
   useEffect(() => {
+    if (!dilMod) return;
     const uid = kul?.id ? String(kul.id) : "admin";
     if (!uid || !dilId || !hoca?.id) return;
     loadMsgsFromDB(uid, dilId, hoca.id).then(dbMsgs => {
@@ -785,7 +786,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         }
       }
     });
-  }, []);
+  }, [dilMod]);
 
   // Mesajları otomatik kaydet
   const msgKaydet = (yeniMsgs) => {
