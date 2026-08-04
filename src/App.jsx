@@ -762,7 +762,7 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
-  const isMobile = window.innerWidth <= 768;
+  const [isMobile] = useState(()=>window.innerWidth <= 768);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
