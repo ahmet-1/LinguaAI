@@ -1253,7 +1253,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       }).catch(()=>{});
       // Mesajları Supabase'e kaydet
       fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs].filter(m=>m&&m.r&&m.t)}
+        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs].filter(m=>m&&m.r&&m.t)})
       }).catch(()=>{});
       const idx = Math.min(Math.floor((gecmis.length+1)/5), SEVIYELER.length-1);
       const yeniSv = SEVIYELER[idx];
