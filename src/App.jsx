@@ -843,7 +843,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     const ad = kul?.ad?.split(" ")[0]||"";
     const besmele = BESMELE_DILLER.includes(dilId) ? BESMELE_METNI : "";
     // Önceki ders geçmişini al
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
     const devamMesaj = sonDers 
       ? "Son dersimizde "+sonDers.kategori+" konusunu işlemiştik. Kaldığımız yerden devam edelim.\n\n"
@@ -925,11 +925,10 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   },[dilMod]);
 
   useEffect(()=>{sonRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
-  useEffect(()=>{const p=document.getElementById("sol-panel");if(p&&window.innerWidth<=768)p.style.display="none";},[]);/*sol-panel-hide*/
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
 
     const buSeviyeMufredat = getMufredat(dilId, seviye);
@@ -1239,7 +1238,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       }).catch(()=>{});
       // Mesajları Supabase'e kaydet
       fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs].filter(m=>m&&m.r&&m.t)})
+        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs]})
       }).catch(()=>{});
       const idx = Math.min(Math.floor((gecmis.length+1)/5), SEVIYELER.length-1);
       const yeniSv = SEVIYELER[idx];
@@ -1457,7 +1456,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div id="sol-panel" style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
@@ -2221,7 +2220,7 @@ export default function App() {
           setSbDersler(gruplu);
           // localStorage'a da kaydet
           Object.keys(gruplu).forEach(dilId=>{
-            setDG(String(kul.id), dilId, gruplu[dilId]);
+            setDG(kul.id, dilId, gruplu[dilId]);
           });
         }
       }).catch(()=>{});
@@ -2625,7 +2624,7 @@ const kulGiris = u => {
           <div style={{color:K.tx,fontSize:16,fontWeight:700,marginBottom:12}}>📊 Dil Seviyelerin</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
             {DILLER.map(d=>{
-              const dersler = getDG(String(kul.id),d.id);
+              const dersler = getDG(kul.id,d.id);
               if(dersler.length===0) return null;
               const sv = getSV(kul.id,d.id);
               return(
@@ -2645,7 +2644,7 @@ const kulGiris = u => {
           </div>
 
           {DILLER.map(d=>{
-            const dersler = getDG(String(kul.id),d.id);
+            const dersler = getDG(kul.id,d.id);
             if(dersler.length===0) return null;
             return(
               <div key={d.id} style={{background:K.card,borderRadius:14,padding:16,border:"1px solid "+K.bdr,marginBottom:14}}>
@@ -2665,8 +2664,8 @@ const kulGiris = u => {
                         <div style={{background:"rgba(46,125,50,0.15)",color:K.gL,borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:700}}>{dr.seviye}</div>
                         <button onClick={()=>{
                           if(!window.confirm("Bu ders kaydı silinsin mi?"))return;
-                          const yeniDersler=getDG(String(kul.id),d.id).filter(x=>x.id!==dr.id);
-                          setDG(String(kul.id),d.id,yeniDersler);
+                          const yeniDersler=getDG(kul.id,d.id).filter(x=>x.id!==dr.id);
+                          setDG(kul.id,d.id,yeniDersler);
                           fetch("/api/dersler?id="+dr.id,{method:"DELETE"}).catch(()=>{});
                         }} style={{background:"none",border:"none",color:"#ef5350",cursor:"pointer",fontSize:15,padding:"2px 6px"}}>🗑</button>
                       </div>
@@ -2693,7 +2692,7 @@ const kulGiris = u => {
             );
           }).filter(Boolean)}
 
-          {DILLER.every(d=>getDG(String(kul.id),d.id).length===0)&&(
+          {DILLER.every(d=>getDG(kul.id,d.id).length===0)&&(
             <div style={{background:K.card,borderRadius:12,padding:30,border:"1px solid "+K.bdr,textAlign:"center",color:K.tx4}}>
               Henüz ders geçmişin yok. Hemen başla! 🚀
             </div>
