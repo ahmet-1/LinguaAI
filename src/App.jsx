@@ -762,7 +762,7 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
-  const isMobile = true; // Gecici test
+  const [isMobile] = useState(()=>typeof window!=="undefined"&&window.innerWidth<=768);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
@@ -1555,7 +1555,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                   <div style={{fontSize:10,color:K.tx4,marginBottom:2,textAlign:m.r==="user"?"right":"left"}}>
                     {m.r==="user"?"Sen":"🤖 "+hoca.ad.split(" ")[0]}
                   </div>
-                  <div className="msg-bubble" style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:isMobile?20:16,lineHeight:isMobile?2.1:1.9,whiteSpace:"pre-wrap",
+                  <div className="msg-bubble" style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:isMobile?22:16,lineHeight:isMobile?2.2:1.9,padding:isMobile?"18px 22px":"14px 18px",whiteSpace:"pre-wrap",
                     background:m.r==="user"?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.card,
                     borderBottomRightRadius:m.r==="user"?4:16,
                     borderBottomLeftRadius:m.r==="ai"?4:16,
