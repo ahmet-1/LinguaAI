@@ -417,14 +417,6 @@ kurdish:[
     {id:"kd4",ad:"Heval Demir",yer:"Diyarbakır",uz:"Konuşma Dili",p:4.7,n:390,c:false},
     {id:"kd5",ad:"Ogrt. Berivan Ay",yer:"Mardin",uz:"Cocuklara Kürtçe",p:4.9,n:280,c:true},
     {id:"kd6",ad:"Ogrt. Serhildan Er",yer:"Van",uz:"Cocuk Kürtçesi",p:4.8,n:210,c:true},
-  ],
-  persian:[
-    {id:"p1",ad:"Ustad Reza Tehrani",yer:"Tahran",uz:"Farsça & Edebiyat",p:4.8,n:1200,c:false},
-    {id:"p2",ad:"Dr. Maryam Sadeghi",yer:"İsfahan",uz:"Modern Farsça",p:4.7,n:980,c:false},
-    {id:"p3",ad:"Hafız Kemal",yer:"Şiraz",uz:"Klasik Farsça",p:4.9,n:760,c:false},
-    {id:"p4",ad:"Leyla Ahmadi",yer:"Tebriz",uz:"Günlük Farsça",p:4.6,n:540,c:false},
-    {id:"p5",ad:"Ali Rıza",yer:"Meşhed",uz:"Çocuk Farsçası",p:4.8,n:320,c:true},
-    {id:"p6",ad:"Fatıma Hosseini",yer:"Kum",uz:"Çocuk Farsçası",p:4.7,n:280,c:true}
   ]
 };
 
@@ -762,7 +754,6 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
-  const [isMobile] = useState(()=>typeof window!=="undefined"&&window.innerWidth<=768);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
@@ -790,13 +781,6 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
   // Mesajları otomatik kaydet
   const msgKaydet = (yeniMsgs) => {
-    // Her mesajda Supabase'e kaydet
-    const uid = kul?.id ? String(kul.id) : "admin";
-    if(uid && dilId && hoca?.id && yeniMsgs.length > 0){
-      fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({userId:uid,dilId,hocaId:hoca.id,messages:yeniMsgs.filter(m=>m.r&&m.t)})
-      }).catch(()=>{});
-    }
     setMsgs(yeniMsgs);
     if (DERS_KEY) {
       try { localStorage.setItem(DERS_KEY, JSON.stringify(yeniMsgs.slice(-100))); } catch {}
@@ -853,7 +837,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     const ad = kul?.ad?.split(" ")[0]||"";
     const besmele = BESMELE_DILLER.includes(dilId) ? BESMELE_METNI : "";
     // Önceki ders geçmişini al
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
     const devamMesaj = sonDers 
       ? "Son dersimizde "+sonDers.kategori+" konusunu işlemiştik. Kaldığımız yerden devam edelim.\n\n"
@@ -938,7 +922,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
 
     const buSeviyeMufredat = getMufredat(dilId, seviye);
@@ -1067,7 +1051,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     // sesliMod=true ise hoca konuşur, false ise sadece yazar
     if (sesliModRef.current) {
       const sesDil = dilMod==="hedef" ? dil.mic : "tr-TR";
-      const sesMeyin = temizYan.replace(/[*#_~`]/g,"").replace(/\s+/g," ").trim().substring(0,3000);
+      const sesMeyin = temizYan.replace(/[*#_~`]/g,"").replace(/\s+/g," ").trim().substring(0,1500);
       sesliOku(sesMeyin, hoca.id, sesDil).then(()=>{
         if(konusmaRef.current) setTimeout(mikDinle, 1500);
       }).catch(()=>{
@@ -1130,7 +1114,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         setYazi("");
         if (e.error === "no-speech") {
           // Sessizlik - tekrar dinle
-          if (konusmaRef.current) setTimeout(mikDinle, 2000);
+          if (konusmaRef.current) setTimeout(mikDinle, 1000);
         } else if (e.error === "not-allowed") {
           setMikErr("Mikrofon izni reddedildi. Tarayıcı ayarlarından izin ver.");
           konusmaRef.current = false;
@@ -1278,12 +1262,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{textAlign:"center",marginBottom:20}}>
             <div style={{fontSize:40,marginBottom:8}}>📝</div>
             <div style={{color:K.tx,fontSize:20,fontWeight:800}}>Orta Seviye Kontrolü</div>
-            <div style={{color:K.tx4,fontSize:16,marginTop:6}}>{seviye} seviyesi — 10. ders tamamlandı</div>
+            <div style={{color:K.tx4,fontSize:13,marginTop:6}}>{seviye} seviyesi — 10. ders tamamlandı</div>
           </div>
           <div style={{background:K.bg3,borderRadius:12,padding:16,marginBottom:16}}>
-            <div style={{color:K.tx2,fontSize:16,fontWeight:700,marginBottom:10}}>Bu kontrolde ölçülecekler:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>Bu kontrolde ölçülecekler:</div>
             {["📖 Okuma — Metni anlayabiliyor musun?","✍️ Yazma — Doğru cümle kurabilir misin?","👂 Anlama — Soruları cevaplayabiliyor musun?","🗣️ Telaffuz — Kelimeleri doğru söylüyor musun?"].map((m,i)=>(
-              <div key={i} style={{color:K.tx3,fontSize:15,padding:"5px 0",borderBottom:i<3?"1px solid "+K.bdr:"none"}}>{m}</div>
+              <div key={i} style={{color:K.tx3,fontSize:12,padding:"5px 0",borderBottom:i<3?"1px solid "+K.bdr:"none"}}>{m}</div>
             ))}
           </div>
           <div style={{color:K.tx4,fontSize:11,marginBottom:16,textAlign:"center"}}>
@@ -1317,7 +1301,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{textAlign:"center",marginBottom:20}}>
             <div style={{fontSize:40,marginBottom:8}}>🎓</div>
             <div style={{color:K.tx,fontSize:20,fontWeight:800}}>Seviye Sonu Sınavı</div>
-            <div style={{color:K.tx4,fontSize:16,marginTop:6}}>{seviye} seviyesi tamamlandı!</div>
+            <div style={{color:K.tx4,fontSize:13,marginTop:6}}>{seviye} seviyesi tamamlandı!</div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
             {[
@@ -1327,7 +1311,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
               {ad:"🗣️ Konuşma",puan:25},
             ].map((b,i)=>(
               <div key={i} style={{background:K.bg3,borderRadius:10,padding:14,textAlign:"center"}}>
-                <div style={{color:K.tx,fontSize:16,fontWeight:700}}>{b.ad}</div>
+                <div style={{color:K.tx,fontSize:13,fontWeight:700}}>{b.ad}</div>
                 <div style={{color:K.gL,fontSize:22,fontWeight:900,marginTop:4}}>{b.puan}</div>
                 <div style={{color:K.tx4,fontSize:10}}>puan</div>
               </div>
@@ -1342,11 +1326,11 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             const sinavMesaj = {r:"ai", t:"🎓 "+seviye+" Seviye Final Sınavı başlıyor! Sana Reading, Listening, Writing ve Speaking bölümlerinden sorular soracağım. Her bölüm 25 puan. Hazır mısın?"};
             msgKaydet([...msgs, sinavMesaj]);
           }}
-            style={{width:"100%",padding:13,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:20}}>
+            style={{width:"100%",padding:13,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:10,cursor:"pointer",fontWeight:700,fontSize:17}}>
             Final Sınavına Başla
           </button>
           <button onClick={()=>setSinavEkrani(null)}
-            style={{width:"100%",padding:10,background:"transparent",color:K.tx4,border:"none",cursor:"pointer",fontSize:15,marginTop:8}}>
+            style={{width:"100%",padding:10,background:"transparent",color:K.tx4,border:"none",cursor:"pointer",fontSize:12,marginTop:8}}>
             Sonra Yap
           </button>
         </div>
@@ -1361,20 +1345,20 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           textAlign:"center",boxShadow:"0 24px 64px rgba(0,0,0,0.8)",maxHeight:"90vh",overflowY:"auto"}}>
           <div style={{display:"flex",justifyContent:"center",marginBottom:16}}><Av h={hoca} dil={dil} sz={80}/></div>
           <div style={{color:K.tx,fontSize:20,fontWeight:800,marginBottom:4}}>{hoca.ad}</div>
-          <div style={{color:dil.vurgu,fontSize:15,marginBottom:4}}>{hoca.yer}</div>
-          <div style={{color:K.tx3,fontSize:16,marginBottom:20}}>{hoca.uz}</div>
+          <div style={{color:dil.vurgu,fontSize:12,marginBottom:4}}>{hoca.yer}</div>
+          <div style={{color:K.tx3,fontSize:13,marginBottom:20}}>{hoca.uz}</div>
 
           {/* SEVİYE SEÇİMİ */}
           <div style={{marginBottom:20}}>
-            <div style={{color:K.tx2,fontSize:16,fontWeight:700,marginBottom:10}}>📊 Seviyeni Seç:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>📊 Seviyeni Seç:</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,justifyContent:"center"}}>
               {["A1","A2","B1","B2","C1","C2"].map(sv=>(
                 <button key={sv} onClick={()=>setSeviye(sv)}
-                  style={{padding:"8px 14px",borderRadius:10,cursor:"pointer",fontSize:15,fontWeight:seviye===sv?700:400,
+                  style={{padding:"8px 14px",borderRadius:10,cursor:"pointer",fontSize:12,fontWeight:seviye===sv?700:400,
                     background:seviye===sv?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.bg3,
                     color:seviye===sv?"#fff":K.tx3,border:"1px solid "+(seviye===sv?K.g3:K.bdr),
                     textAlign:"center",minWidth:60}}>
-                  <div style={{fontSize:16,fontWeight:700}}>{sv}</div>
+                  <div style={{fontSize:13,fontWeight:700}}>{sv}</div>
                   <div style={{fontSize:9,opacity:0.8,marginTop:1}}>
                     {sv==="A1"?"Başlangıç":sv==="A2"?"Temel":sv==="B1"?"Orta":sv==="B2"?"Orta Üst":sv==="C1"?"İleri":"Uzman"}
                   </div>
@@ -1387,11 +1371,11 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           </div>
 
           {dil.cats && <>
-            <div style={{color:K.tx2,fontSize:16,fontWeight:700,marginBottom:10}}>📚 Konu Kategorisi:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>📚 Konu Kategorisi:</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,justifyContent:"center",marginBottom:20}}>
               {dil.cats.map(cat=>(
                 <button key={cat} onClick={()=>setKategori(cat)}
-                  style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontSize:15,fontWeight:kategori===cat?700:400,
+                  style={{padding:"6px 12px",borderRadius:20,cursor:"pointer",fontSize:12,fontWeight:kategori===cat?700:400,
                     background:kategori===cat?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.bg3,
                     color:kategori===cat?"#fff":K.tx3,border:"1px solid "+(kategori===cat?K.g3:K.bdr)}}>
                   {cat}
@@ -1400,7 +1384,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             </div>
           </>}
 
-          <div style={{color:K.tx2,fontSize:20,fontWeight:700,marginBottom:16}}>Ders Dilini Seç:</div>
+          <div style={{color:K.tx2,fontSize:17,fontWeight:700,marginBottom:16}}>Ders Dilini Seç:</div>
           {[
             {id:"tr",    b:"🇹🇷 Türkçe",         a:"Hoca Türkçe anlatır"},
             {id:"hedef", b:dil.bayrak+" "+dil.ad, a:"Hoca "+dil.ad+" konuşur"},
@@ -1411,14 +1395,14 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                 cursor:"pointer",border:"1px solid "+K.bdr,textAlign:"left"}}
               onMouseEnter={e=>{e.currentTarget.style.borderColor=dil.vurgu;e.currentTarget.style.background="rgba(46,125,50,0.1)";}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor=K.bdr;e.currentTarget.style.background=K.bg3;}}>
-              <div style={{color:K.tx,fontWeight:700,fontSize:17}}>{s.b}</div>
-              <div style={{color:K.tx3,fontSize:15,marginTop:3}}>{s.a}</div>
+              <div style={{color:K.tx,fontWeight:700,fontSize:14}}>{s.b}</div>
+              <div style={{color:K.tx3,fontSize:12,marginTop:3}}>{s.a}</div>
             </div>
           ))}
           {klavyeGerekli && (
             <div style={{background:"rgba(249,168,37,0.1)",border:"1px solid "+K.warn+"55",borderRadius:10,
               padding:"12px 16px",marginBottom:14,textAlign:"left"}}>
-              <div style={{color:K.warn,fontWeight:700,fontSize:15,marginBottom:6}}>
+              <div style={{color:K.warn,fontWeight:700,fontSize:12,marginBottom:6}}>
                 ⌨️ Bu ders için {dil.ad} klavyesi önerilir
               </div>
               <div style={{color:K.tx4,fontSize:11,lineHeight:1.7,whiteSpace:"pre-line"}}>
@@ -1430,7 +1414,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             </div>
           )}
           <button onClick={kapat} style={{marginTop:10,padding:"9px 24px",background:"transparent",
-            color:K.tx4,border:"1px solid "+K.bdr,borderRadius:9,cursor:"pointer",fontSize:16}}>← Geri</button>
+            color:K.tx4,border:"1px solid "+K.bdr,borderRadius:9,cursor:"pointer",fontSize:13}}>← Geri</button>
         </div>
       </div>
     );
@@ -1446,12 +1430,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         background:"linear-gradient(135deg,"+dil.renk+"ee,"+dil.renk+"99)",borderBottom:"2px solid "+dil.vurgu}}>
         <Av h={hoca} dil={dil} sz={46}/>
         <div style={{flex:1}}>
-          <div style={{color:"#fff",fontWeight:700,fontSize:17}}>{hoca.ad}</div>
+          <div style={{color:"#fff",fontWeight:700,fontSize:14}}>{hoca.ad}</div>
           <div style={{color:dil.vurgu,fontSize:11}}>{hoca.yer+" • "+hoca.uz}</div>
         </div>
         <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"3px 10px",textAlign:"center"}}>
           <div style={{fontSize:9,color:"#aaa"}}>SEVİYE</div>
-          <div style={{fontWeight:800,color:K.gL,fontSize:20}}>{seviye}</div>
+          <div style={{fontWeight:800,color:K.gL,fontSize:17}}>{seviye}</div>
           <div style={{fontSize:9,color:"#aaa"}}>{SEVIYE_ACIKLAMA[seviye]?.split("—")[0]}</div>
         </div>
         <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"3px 8px",fontSize:11,color:"#fff",cursor:"pointer"}}
@@ -1466,12 +1450,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div className="sol-panel" style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:isMobile?"none":"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
-            <div style={{color:K.tx,fontWeight:700,fontSize:17}}>{hoca.ad}</div>
-            <div style={{color:dil.vurgu,fontSize:15,marginTop:2}}>{hoca.yer}</div>
+            <div style={{color:K.tx,fontWeight:700,fontSize:14}}>{hoca.ad}</div>
+            <div style={{color:dil.vurgu,fontSize:12,marginTop:2}}>{hoca.yer}</div>
             <div style={{color:K.gL,fontSize:18,fontWeight:900,marginTop:6}}>{seviye}</div>
             {yukl&&<div style={{marginTop:6,color:K.gL,fontSize:10,animation:"tt 1s infinite"}}>Yanıt yazıyor...</div>}
           </div>
@@ -1555,7 +1539,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                   <div style={{fontSize:10,color:K.tx4,marginBottom:2,textAlign:m.r==="user"?"right":"left"}}>
                     {m.r==="user"?"Sen":"🤖 "+hoca.ad.split(" ")[0]}
                   </div>
-                  <div className="msg-bubble" style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:isMobile?22:16,lineHeight:isMobile?2.2:1.9,whiteSpace:"pre-wrap",
+                  <div style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:20,lineHeight:2.1,whiteSpace:"pre-wrap",
                     background:m.r==="user"?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.card,
                     borderBottomRightRadius:m.r==="user"?4:16,
                     borderBottomLeftRadius:m.r==="ai"?4:16,
@@ -1590,9 +1574,9 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                 onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&gonder(yazi)}
                 placeholder={mikr?"Dinliyorum...":konusmaRef.current?"Konuşuyor veya yaz...":"Mesaj yaz veya 🎤 bas..."}
                 style={{flex:1,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:10,
-                  padding:"12px 14px",color:K.tx,fontSize:20,outline:"none"}}/>
+                  padding:"12px 14px",color:K.tx,fontSize:17,outline:"none"}}/>
               <button onClick={()=>{sesliModRef.current=false; setSesliMod(false); gonder(yazi);}} disabled={yukl||!yazi.trim()}
-                style={{padding:"12px 20px",borderRadius:10,fontWeight:700,fontSize:20,border:"none",flexShrink:0,
+                style={{padding:"12px 20px",borderRadius:10,fontWeight:700,fontSize:17,border:"none",flexShrink:0,
                   cursor:yukl||!yazi.trim()?"not-allowed":"pointer",
                   background:yukl||!yazi.trim()?K.bg3:"linear-gradient(135deg,"+K.g2+","+K.t2+")",
                   color:yukl||!yazi.trim()?K.tx4:"#fff"}}>➤</button>
@@ -1616,10 +1600,10 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             {!telaffuzSonuc ? (
               <div style={{textAlign:"center",padding:20}}>
                 <div style={{fontSize:40,marginBottom:12}}>🎤</div>
-                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (5 saniye)</div>
+                <div style={{color:K.tx2,fontSize:13}}>Dinleniyor... (5 saniye)</div>
               </div>
             ) : telaffuzSonuc.error ? (
-              <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
+              <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:13}}>{telaffuzSonuc.error}</div>
             ) : (
               <div>
                 <div style={{textAlign:"center",marginBottom:16}}>
@@ -1692,7 +1676,10 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
     fetch("/api/users").then(r=>r.json()).then(dbUsers=>{
       if(dbUsers&&dbUsers.length>0){
         const a=getA();
-        const yeniA={...a,users:dbUsers};
+        const localEmails=new Set((a.users||[]).map(u=>u.email));
+        const yeni=[...(a.users||[])];
+        dbUsers.forEach(du=>{ if(!localEmails.has(du.email)) yeni.push(du); });
+        const yeniA={...a,users:yeni};
         setA(yeniA);
         setCfg(yeniA);
       }
@@ -1739,9 +1726,9 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
   };
 
   const gI={width:"100%",padding:"10px 12px",background:K.bg3,border:"1px solid "+K.bdr,
-    borderRadius:9,color:K.tx,fontSize:16,outline:"none",boxSizing:"border-box",marginBottom:11};
+    borderRadius:9,color:K.tx,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:11};
   const kd={background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:14};
-  const bG={padding:"10px 18px",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:16,
+  const bG={padding:"10px 18px",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:13,
     border:"none",background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff"};
 
   const SEKMELER=[
@@ -1755,7 +1742,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{background:K.card,borderRadius:16,padding:24,width:"90%",maxWidth:600,maxHeight:"80vh",overflow:"hidden",display:"flex",flexDirection:"column",border:"1px solid "+K.bdr}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-              <div style={{color:K.tx,fontWeight:700,fontSize:19}}>💬 {izleme.kul.ad} - Tüm Mesajlar</div>
+              <div style={{color:K.tx,fontWeight:700,fontSize:16}}>💬 {izleme.kul.ad} - Tüm Mesajlar</div>
               <button onClick={()=>setIzleme(null)} style={{background:"none",border:"none",color:K.tx3,fontSize:22,cursor:"pointer"}}>✕</button>
             </div>
             <div style={{overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:8}}>
@@ -1763,7 +1750,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                 <div key={i} style={{padding:"8px 12px",borderRadius:10,background:m.r==="user"?"rgba(46,125,50,0.1)":K.bg3,
                   alignSelf:m.r==="user"?"flex-end":"flex-start",maxWidth:"85%"}}>
                   <div style={{fontSize:10,color:K.tx4,marginBottom:3}}>{m.r==="user"?"👤 "+izleme.kul.ad:"🤖 Hoca"}</div>
-                  <div style={{color:K.tx,fontSize:16}}>{m.t}</div>
+                  <div style={{color:K.tx,fontSize:13}}>{m.t}</div>
                 </div>
               ))}
             </div>
@@ -1777,19 +1764,19 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
             background:"linear-gradient(135deg,"+K.g4+","+K.t3+")",
             display:"flex",alignItems:"center",justifyContent:"center",
             color:"#fff",fontWeight:900,fontSize:19}}>L</div>
-          <span style={{fontWeight:900,color:K.tx,fontSize:20}}>Lisan <span style={{color:K.gL}}>Öğren</span></span>
+          <span style={{fontWeight:900,color:K.tx,fontSize:17}}>Lisan <span style={{color:K.gL}}>Öğren</span></span>
         </div>
         {SEKMELER.map(([id,ic,lb])=>(
           <button key={id} onClick={()=>setSekme(id)}
             style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",borderRadius:9,border:"none",
               background:sekme===id?"rgba(46,125,50,0.18)":"transparent",
-              color:sekme===id?K.gL:K.tx4,cursor:"pointer",fontSize:15,textAlign:"left",
+              color:sekme===id?K.gL:K.tx4,cursor:"pointer",fontSize:12,textAlign:"left",
               fontWeight:sekme===id?700:400,borderLeft:sekme===id?"3px solid "+K.g3:"3px solid transparent"}}>
             {ic} {lb}
           </button>
         ))}
         <div style={{flex:1}}/>
-        <button onClick={kapat} style={{padding:"10px 12px",borderRadius:9,border:"1px solid "+K.bdr,background:"transparent",color:K.tx4,cursor:"pointer",fontSize:15,marginBottom:6}}>
+        <button onClick={kapat} style={{padding:"10px 12px",borderRadius:9,border:"1px solid "+K.bdr,background:"transparent",color:K.tx4,cursor:"pointer",fontSize:12,marginBottom:6}}>
           ← Uygulamaya Dön
         </button>
         <button onClick={admCikis} style={{padding:"8px 12px",borderRadius:9,border:"1px solid "+K.err+"44",background:"rgba(198,40,40,0.08)",color:K.errL,cursor:"pointer",fontSize:11}}>
@@ -1806,7 +1793,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               <div style={{background:"rgba(198,40,40,0.15)",border:"1px solid "+K.err+"44",
                 borderRadius:10,padding:"8px 14px",cursor:"pointer"}}
                 onClick={()=>setSekme("bildirimler")}>
-                <span style={{color:K.errL,fontWeight:700,fontSize:16}}>
+                <span style={{color:K.errL,fontWeight:700,fontSize:13}}>
                   🔔 {(cfg.bildirimler||[]).filter(b=>!b.okundu).length} yeni bildirim
                 </span>
               </div>
@@ -1823,8 +1810,8 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               </div>
             ))}
           </div>
-          {cfg.iban&&<div style={kd}><div style={{color:K.tx2,fontSize:15,marginBottom:8,fontWeight:600}}>IBAN</div>
-            <div style={{color:K.tx3,fontSize:16}}>{cfg.acName}<br/><strong style={{color:K.gL,fontFamily:"monospace"}}>{cfg.iban}</strong><br/>{cfg.bank}</div></div>}
+          {cfg.iban&&<div style={kd}><div style={{color:K.tx2,fontSize:12,marginBottom:8,fontWeight:600}}>IBAN</div>
+            <div style={{color:K.tx3,fontSize:13}}>{cfg.acName}<br/><strong style={{color:K.gL,fontFamily:"monospace"}}>{cfg.iban}</strong><br/>{cfg.bank}</div></div>}
         </>}
 
         {sekme==="kul"&&<>
@@ -1836,7 +1823,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
             value={kulArama||""}
             onChange={e=>setKulArama(e.target.value)}
             style={{width:"100%",padding:"10px 14px",background:K.bg3,border:"1px solid "+K.bdr,
-              borderRadius:9,color:K.tx,fontSize:16,outline:"none",marginBottom:14,boxSizing:"border-box"}}
+              borderRadius:9,color:K.tx,fontSize:13,outline:"none",marginBottom:14,boxSizing:"border-box"}}
           />
             {kullaniciListesi.length===0?<div style={{...kd,color:K.tx4,textAlign:"center",padding:30}}>Henüz kayıtlı kullanıcı yok</div>:(
             <div style={{...kd,padding:0,overflow:"hidden"}}>
@@ -1854,7 +1841,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                 <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1fr 1fr 0.8fr 0.6fr",
                   padding:"11px 14px",borderTop:"1px solid "+K.bdr,alignItems:"center"}}>
                   <div>
-                    <div style={{color:K.tx,fontSize:15,fontWeight:600}}>{u.ad}</div>
+                    <div style={{color:K.tx,fontSize:12,fontWeight:600}}>{u.ad}</div>
                     <div style={{color:K.tx4,fontSize:10}}>{u.email}</div>
                     <div style={{color:K.tx4,fontSize:10}}>{u.dogum||""} {u.sehir?("/ "+u.sehir):""}</div>
                     <div style={{color:K.tx4,fontSize:10}}>{u.tarih}</div>
@@ -1865,7 +1852,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                   <div style={{display:"inline-block",borderRadius:5,padding:"2px 7px",fontSize:10,fontWeight:600,
                     background:u.durum==="Aktif"?"rgba(46,125,50,0.18)":u.durum==="Deneme"?"rgba(249,168,37,0.15)":"rgba(198,40,40,0.15)",
                     color:u.durum==="Aktif"?K.gL:u.durum==="Deneme"?K.warn:K.errL}}>{u.durum}</div>
-                  <div style={{color:K.warn,fontSize:15,fontWeight:700}}>{u.odeme}</div>
+                  <div style={{color:K.warn,fontSize:12,fontWeight:700}}>{u.odeme}</div>
                   <div style={{display:"flex",gap:6,flexDirection:"column"}}>
                     <button onClick={()=>setSecilenKullanici(u)}
                       style={{padding:"5px 10px",borderRadius:6,background:K.bg3,color:K.tL,
@@ -1901,13 +1888,13 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                   <button onClick={()=>setSecilenKullanici(null)}
                     style={{background:"none",border:"none",color:K.tx4,fontSize:20,cursor:"pointer"}}>✕</button>
                 </div>
-                <div style={{color:K.tx,fontWeight:700,fontSize:20,marginBottom:12}}>📚 Ders Geçmişi</div>
+                <div style={{color:K.tx,fontWeight:700,fontSize:17,marginBottom:12}}>📚 Ders Geçmişi</div>
                 {DILLER.map(d => {
                   const dersler = getDG(secilenKullanici.id, d.id);
                   if(dersler.length===0) return null;
                   return (
                     <div key={d.id} style={{background:K.bg3,borderRadius:10,padding:12,marginBottom:8}}>
-                      <div style={{color:K.tx,fontWeight:600,fontSize:16,marginBottom:6}}>
+                      <div style={{color:K.tx,fontWeight:600,fontSize:13,marginBottom:6}}>
                         {d.bayrak} {d.ad} — {getSV(secilenKullanici.id, d.id)} seviye
                       </div>
                       {dersler.slice(-3).map(dr => (
@@ -1953,7 +1940,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
 
         {sekme==="ders"&&<>
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:8}}>📡 Aktif Dersler</div>
-          <div style={{color:K.tx4,fontSize:15,marginBottom:16}}>Kullanıcıya tıkla → tüm derslerini gör → derse tıkla → mesajları izle</div>
+          <div style={{color:K.tx4,fontSize:12,marginBottom:16}}>Kullanıcıya tıkla → tüm derslerini gör → derse tıkla → mesajları izle</div>
           {kullaniciListesi.filter(u=>u.durum==="Aktif"||u.durum==="Deneme").length===0
             ? <div style={{...kd,color:K.tx4,textAlign:"center",padding:30}}>Şu an aktif ders yok</div>
             : kullaniciListesi.filter(u=>u.durum==="Aktif"||u.durum==="Deneme").map(u=>(
@@ -1994,7 +1981,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
 
         {sekme==="derslerim"&&<>
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>📚 Derslerim</div>
-          <div style={{color:K.tx4,fontSize:15,marginBottom:16}}>Admin olarak kendi ders geçmişiniz</div>
+          <div style={{color:K.tx4,fontSize:12,marginBottom:16}}>Admin olarak kendi ders geçmişiniz</div>
           {DILLER.map(d => {
             const admId = "admin";
             const dersler = getDG(admId, d.id);
@@ -2039,7 +2026,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
 
         {sekme==="iht"&&<>
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:8}}>⚠️ İhtar Geçmişi</div>
-          <div style={{color:K.tx4,fontSize:15,marginBottom:16}}>Uygunsuz içerik gönderen kullanıcılar otomatik kaydedilir.</div>
+          <div style={{color:K.tx4,fontSize:12,marginBottom:16}}>Uygunsuz içerik gönderen kullanıcılar otomatik kaydedilir.</div>
           {(cfg.ihtarlar||[]).length===0?
             <div style={{...kd,color:K.tx4,textAlign:"center",padding:30}}>İhtar kaydı yok ✓</div>:
             [...(cfg.ihtarlar||[])].reverse().map(ih=>(
@@ -2050,7 +2037,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                   <div style={{background:"rgba(198,40,40,0.15)",color:K.errL,borderRadius:6,
                     padding:"2px 10px",fontSize:11,fontWeight:700}}>⚠️ UYARI</div>
                 </div>
-                <div style={{background:K.bg3,borderRadius:8,padding:10,color:K.tx3,fontSize:15,fontStyle:"italic"}}>
+                <div style={{background:K.bg3,borderRadius:8,padding:10,color:K.tx3,fontSize:12,fontStyle:"italic"}}>
                   "{ih.mesaj}"
                 </div>
                 <div style={{display:"flex",gap:8,marginTop:10}}>
@@ -2060,7 +2047,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                     alert(ih.kulAd+" üyeliği askıya alındı.");
                     setCfg(getA());
                   }} style={{padding:"6px 14px",borderRadius:7,background:"rgba(198,40,40,0.15)",
-                    color:K.errL,border:"1px solid "+K.err+"44",cursor:"pointer",fontSize:15,fontWeight:600}}>
+                    color:K.errL,border:"1px solid "+K.err+"44",cursor:"pointer",fontSize:12,fontWeight:600}}>
                     Üyeliği Askıya Al
                   </button>
                   <button onClick={()=>{
@@ -2116,7 +2103,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               <div key={b.id} style={{...kd,border:"1px solid "+(b.okundu?K.bdr:K.g3),background:b.okundu?K.card:"rgba(46,125,50,0.06)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div>
-                    <div style={{color:K.tx,fontSize:16,fontWeight:b.okundu?400:700}}>{b.mesaj}</div>
+                    <div style={{color:K.tx,fontSize:13,fontWeight:b.okundu?400:700}}>{b.mesaj}</div>
                     <div style={{color:K.tx4,fontSize:11,marginTop:4}}>{b.tarih}</div>
                   </div>
                   {!b.okundu&&<button onClick={()=>kaydet({...cfg,bildirimler:(cfg.bildirimler||[]).map(x=>x.id===b.id?{...x,okundu:true}:x)})}
@@ -2128,50 +2115,6 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
         </>}
 
         {sekme==="bil"&&<>
-          <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>🔔 Bildirimler</div>
-          <div style={{background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:16}}>
-            <div style={{color:K.tx,fontWeight:700,marginBottom:10}}>📢 Manuel Bildirim Gönder</div>
-            <select id="bilKul" style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8}}>
-              <option value="">Tüm Kullanıcılar</option>
-              {kullaniciListesi.map(u=><option key={u.id} value={u.email}>{u.ad} ({u.email})</option>)}
-            </select>
-            <textarea id="bilMesaj" placeholder="Mesajınızı yazın..." rows={3}
-              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,resize:"none",boxSizing:"border-box",marginBottom:8}}/>
-            <button onClick={()=>{
-              const hedef=document.getElementById("bilKul").value;
-              const mesaj=document.getElementById("bilMesaj").value;
-              if(!mesaj.trim()){alert("Mesaj yazın!");return;}
-              const a=getA();
-              const yeniBil={id:Date.now(),tip:"manuel",mesaj,tarih:new Date().toLocaleString("tr-TR"),okundu:false};
-              kaydet({...cfg,bildirimler:[...(cfg.bildirimler||[]),yeniBil]});
-              alert("✅ Bildirim gönderildi!");
-              document.getElementById("bilMesaj").value="";
-            }} style={{width:"100%",padding:10,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>
-              Gönder
-            </button>
-          </div>
-          <div style={{color:K.tx,fontWeight:700,marginBottom:10}}>⚠️ Deneme Süreci Bitenler</div>
-          {kullaniciListesi.filter(u=>{
-            if(u.durum!=="Deneme") return false;
-            const ts=parseInt(u.trialStart||u.trial_start||0);
-            const gun=(Date.now()-ts)/86400000;
-            return gun>=4;
-          }).map(u=>(
-            <div key={u.id} style={{...kd,display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div>
-                <div style={{color:K.tx,fontWeight:700}}>{u.ad}</div>
-                <div style={{color:K.warn,fontSize:12}}>Deneme süresi bitiyor!</div>
-              </div>
-              <button onClick={()=>{
-                const a=getA();
-                const bil={id:Date.now(),tip:"tesvikTrial",mesaj:u.ad+" - Deneme süreniz bitiyor! Premium üyeliğe geçin.",tarih:new Date().toLocaleString("tr-TR"),okundu:false};
-                kaydet({...cfg,bildirimler:[...(cfg.bildirimler||[]),bil]});
-                alert("Teşvik bildirimi gönderildi: "+u.ad);
-              }} style={{padding:"6px 12px",borderRadius:8,background:"rgba(249,168,37,0.1)",color:K.warn,border:"1px solid "+K.warn+"33",cursor:"pointer",fontSize:15,fontWeight:700}}>
-                📢 Teşvik Gönder
-              </button>
-            </div>
-          ))}
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>Bildirim Gönder</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
             {[{t:"Premium Teşvik",m:"5 günlük denemeniz bitiyor!"},
@@ -2179,7 +2122,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               {t:"Yeni Hoca",m:"Yeni hocalarımız katıldı!"},
               {t:"Ders Hatırlatma",m:"Bugün ders yapmadınız."}].map(n=>(
               <div key={n.t} style={{...kd,marginBottom:0}}>
-                <div style={{color:K.tx,fontWeight:700,marginBottom:6,fontSize:16}}>{n.t}</div>
+                <div style={{color:K.tx,fontWeight:700,marginBottom:6,fontSize:13}}>{n.t}</div>
                 <div style={{color:K.tx4,fontSize:11,lineHeight:1.6,marginBottom:10}}>{n.m}</div>
                 <button onClick={async ()=>{
                   // Tüm kullanıcılara email gönder
@@ -2215,14 +2158,14 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
         {sekme==="set"&&<>
           <div style={{fontSize:20,fontWeight:800,color:K.tx,marginBottom:16}}>Ayarlar</div>
           <div style={kd}>
-            <div style={{color:K.tx,fontWeight:700,marginBottom:14,fontSize:17}}>👤 Hesap</div>
+            <div style={{color:K.tx,fontWeight:700,marginBottom:14,fontSize:14}}>👤 Hesap</div>
             <div style={{color:K.tx4,fontSize:11,marginBottom:4}}>Yönetici E-postası</div>
             <input value={cfg.email||""} onChange={e=>setCfg(s=>({...s,email:e.target.value}))} placeholder="admin@lisanogre.com" style={gI}/>
             <div style={{color:K.tx4,fontSize:11,marginBottom:4}}>İletişim E-postası</div>
             <input value={cfg.contactEmail||""} onChange={e=>setCfg(s=>({...s,contactEmail:e.target.value}))} placeholder="iletisim@lisanogre.com" style={gI}/>
           </div>
           <div style={kd}>
-            <div style={{color:K.tx,fontWeight:700,marginBottom:14,fontSize:17}}>💳 IBAN</div>
+            <div style={{color:K.tx,fontWeight:700,marginBottom:14,fontSize:14}}>💳 IBAN</div>
             <div style={{color:K.tx4,fontSize:11,marginBottom:4}}>Hesap Sahibi</div>
             <input value={cfg.acName||""} onChange={e=>setCfg(s=>({...s,acName:e.target.value}))} placeholder="Ad Soyad" style={gI}/>
             <div style={{color:K.tx4,fontSize:11,marginBottom:4}}>IBAN</div>
@@ -2231,18 +2174,18 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
             <input value={cfg.bank||""} onChange={e=>setCfg(s=>({...s,bank:e.target.value}))} placeholder="Ziraat Bankası" style={gI}/>
           </div>
           <div style={kd}>
-            <div style={{color:K.tx,fontWeight:700,marginBottom:6,fontSize:17}}>🔐 Şifre Değiştir</div>
+            <div style={{color:K.tx,fontWeight:700,marginBottom:6,fontSize:14}}>🔐 Şifre Değiştir</div>
             <input type="password" value={p1} onChange={e=>setP1(e.target.value)} placeholder="Yeni şifre" style={gI}/>
             <input type="password" value={p2} onChange={e=>setP2(e.target.value)} placeholder="Tekrar girin" style={gI}/>
-            {pMsg&&<div style={{color:pMsg.startsWith("✅")?K.gL:K.errL,fontSize:15,marginBottom:10}}>{pMsg}</div>}
+            {pMsg&&<div style={{color:pMsg.startsWith("✅")?K.gL:K.errL,fontSize:12,marginBottom:10}}>{pMsg}</div>}
             <button onClick={sifreDegis} style={{padding:"9px 18px",background:"rgba(46,125,50,0.15)",
               color:K.gL,border:"1px solid "+K.g2+"55",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:12}}>
               Şifreyi Güncelle
             </button>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
-            <button onClick={()=>kaydet(cfg)} style={{...bG,padding:"13px 28px",fontSize:20}}>💾 Kaydet</button>
-            {kayd&&<div style={{color:K.gL,fontSize:16,fontWeight:600}}>✅ Kaydedildi!</div>}
+            <button onClick={()=>kaydet(cfg)} style={{...bG,padding:"13px 28px",fontSize:17}}>💾 Kaydet</button>
+            {kayd&&<div style={{color:K.gL,fontSize:13,fontWeight:600}}>✅ Kaydedildi!</div>}
           </div>
         </>}
 
@@ -2258,7 +2201,7 @@ export default function App() {
   useEffect(()=>{
     // Supabase'den ders geçmişini yükle
     if(kul?.id){
-      fetch("/api/dersler?userId="+String(kul.id)).then(r=>r.json()).then(dersler=>{
+      fetch("/api/dersler?userId="+kul.id).then(r=>r.json()).then(dersler=>{
         if(dersler && dersler.length > 0){
           const gruplu = {};
           dersler.forEach(d=>{
@@ -2271,7 +2214,7 @@ export default function App() {
           setSbDersler(gruplu);
           // localStorage'a da kaydet
           Object.keys(gruplu).forEach(dilId=>{
-            setDG(String(kul.id), dilId, gruplu[dilId]);
+            setDG(kul.id, dilId, gruplu[dilId]);
           });
         }
       }).catch(()=>{});
@@ -2402,7 +2345,7 @@ const kulGiris = u => {
   const adm = getA();
 
   if(adAcik) return <AdminPanel kapat={admKapat} admCikis={admCikis} setDers={setDers} kul={kul}/>;
-  if(ders) return <DersEkrani dilId={ders.dil} hoca={ders.hoca} kul={ders.kul||kul} kapat={()=>{setDers(null);sessionStorage.removeItem("ders");sessionStorage.removeItem("dilMod");}}/>;
+  if(ders) return <DersEkrani dilId={ders.dil} hoca={ders.hoca} kul={ders.kul||kul} kapat={()=>setDers(null)}/>;
 
   const bP={padding:"13px 28px",background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:15,boxShadow:"0 4px 20px "+K.g2+"55"};
   const bS={padding:"13px 28px",background:"transparent",color:K.tx2,border:"1px solid "+K.bdr,borderRadius:12,cursor:"pointer",fontWeight:600,fontSize:14};
@@ -2410,7 +2353,7 @@ const kulGiris = u => {
 
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(170deg,"+K.bg+","+K.bg2+" 50%,"+K.bg+")",fontFamily:"'Segoe UI',system-ui,sans-serif",fontSize:"17px"}}>
-      <style>{`}*{box-sizing:border-box}
+      <style>{`@media(max-width:768px){*{font-size:110%!important;}}*{box-sizing:border-box}
         #__vcsp,.__vcsp,[data-vercel-toolbar],vercel-live-feedback,
         #vercel-live-feedback,.__vcFeedbackButton,#__vercel_speed_insights_widget,
         [data-vercel-speed-insights],[id*="vercel"],[class*="vercel"]{display:none!important;height:0!important;width:0!important;overflow:hidden!important;}`}</style>
@@ -2641,7 +2584,7 @@ const kulGiris = u => {
       {sayfa==="profil"&&kul&&(() => {
         // Supabase'den dersler yükle
         if(kul?.id) {
-          fetch("/api/dersler?userId="+String(kul.id)).then(r=>r.json()).then(dersler=>{
+          fetch("/api/dersler?userId="+kul.id).then(r=>r.json()).then(dersler=>{
             if(dersler&&dersler.length>0){
               const g={};
               dersler.forEach(d=>{
@@ -2672,33 +2615,10 @@ const kulGiris = u => {
             </div>
           </div>
 
-          <div style={{background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:16}}>
-            <div style={{color:K.tx,fontWeight:700,marginBottom:12}}>✏️ Profil Güncelle</div>
-            <input defaultValue={kul?.ad||""} id="pAd" placeholder="Ad Soyad"
-              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
-            <input defaultValue={kul?.tel||""} id="pTel" placeholder="Telefon"
-              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
-            <input type="password" id="pSifre" placeholder="Yeni şifre (boş bırakın değişmesin)"
-              style={{width:"100%",padding:9,background:K.bg3,border:"1px solid "+K.bdr,borderRadius:8,color:K.tx,marginBottom:8,boxSizing:"border-box"}}/>
-            <button onClick={()=>{
-              const yeniKul={...kul,
-                ad:document.getElementById("pAd").value||kul.ad,
-                tel:document.getElementById("pTel").value||kul.tel,
-                pw:document.getElementById("pSifre").value||kul.pw
-              };
-              setKul(yeniKul); DB.s("kul",yeniKul);
-              fetch("/api/users",{method:"PUT",headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({id:kul.id,ad:yeniKul.ad,tel:yeniKul.tel,pw:yeniKul.pw})
-              }).catch(()=>{});
-              alert("✅ Profil güncellendi!");
-            }} style={{width:"100%",padding:10,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontWeight:700}}>
-              Kaydet
-            </button>
-          </div>
           <div style={{color:K.tx,fontSize:16,fontWeight:700,marginBottom:12}}>📊 Dil Seviyelerin</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
             {DILLER.map(d=>{
-              const dersler = getDG(String(kul.id),d.id);
+              const dersler = getDG(kul.id,d.id);
               if(dersler.length===0) return null;
               const sv = getSV(kul.id,d.id);
               return(
@@ -2718,7 +2638,7 @@ const kulGiris = u => {
           </div>
 
           {DILLER.map(d=>{
-            const dersler = getDG(String(kul.id),d.id);
+            const dersler = getDG(kul.id,d.id);
             if(dersler.length===0) return null;
             return(
               <div key={d.id} style={{background:K.card,borderRadius:14,padding:16,border:"1px solid "+K.bdr,marginBottom:14}}>
@@ -2738,8 +2658,8 @@ const kulGiris = u => {
                         <div style={{background:"rgba(46,125,50,0.15)",color:K.gL,borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:700}}>{dr.seviye}</div>
                         <button onClick={()=>{
                           if(!window.confirm("Bu ders kaydı silinsin mi?"))return;
-                          const yeniDersler=getDG(String(kul.id),d.id).filter(x=>x.id!==dr.id);
-                          setDG(String(kul.id),d.id,yeniDersler);
+                          const yeniDersler=getDG(kul.id,d.id).filter(x=>x.id!==dr.id);
+                          setDG(kul.id,d.id,yeniDersler);
                           fetch("/api/dersler?id="+dr.id,{method:"DELETE"}).catch(()=>{});
                         }} style={{background:"none",border:"none",color:"#ef5350",cursor:"pointer",fontSize:15,padding:"2px 6px"}}>🗑</button>
                       </div>
@@ -2766,7 +2686,7 @@ const kulGiris = u => {
             );
           }).filter(Boolean)}
 
-          {DILLER.every(d=>getDG(String(kul.id),d.id).length===0)&&(
+          {DILLER.every(d=>getDG(kul.id,d.id).length===0)&&(
             <div style={{background:K.card,borderRadius:12,padding:30,border:"1px solid "+K.bdr,textAlign:"center",color:K.tx4}}>
               Henüz ders geçmişin yok. Hemen başla! 🚀
             </div>
