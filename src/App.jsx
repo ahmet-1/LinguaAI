@@ -925,6 +925,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   },[dilMod]);
 
   useEffect(()=>{sonRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+  useEffect(()=>{const p=document.getElementById("sol-panel");if(p&&window.innerWidth<=768)p.style.display="none";},[]);// sol-panel-hide
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
@@ -1238,7 +1239,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       }).catch(()=>{});
       // Mesajları Supabase'e kaydet
       fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs]})
+        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs].filter(m=>m&&m.r&&m.t)}
       }).catch(()=>{});
       const idx = Math.min(Math.floor((gecmis.length+1)/5), SEVIYELER.length-1);
       const yeniSv = SEVIYELER[idx];
