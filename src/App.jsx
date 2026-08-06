@@ -171,6 +171,14 @@ const MUFREDAT = {
     C2:"Uzman seviye klasik metin analizi"
   },
 // KÜRTÇE
+  persian: {
+    A1:"Farsça alfabe, temel selamlama, sayılar 1-10, renkler.",
+    A2:"Günlük cümleler, kendini tanıtma, aile kelimeleri.",
+    B1:"Orta düzey konuşma, zaman kalıpları.",
+    B2:"İleri konuşma, iş Farsçası.",
+    C1:"Edebi Farsça, Hafız şiirleri.",
+    C2:"Ana dil seviyesi."
+  },
   kurdish: {
     A1:"Kürtçe alfabesi, temel kelimeler, selamlasma, sayilar",
     A2:"Temel cumle yapisi, fiil temelleri, günlük konusmalar",
@@ -293,6 +301,7 @@ const DILLER = [
   {id:"turkish",ad:"Türkçe",          bayrak:"🇹🇷",renk:"#2a0a0a",vurgu:"#ecf0f1",mic:"tr-TR",mods:["Dilbilgisi","Konuşma","Yazma","TÖMER"],cats:["Genel","Günlük Hayat","İş","Akademik"]},
   {id:"hebrew", ad:"İbranice",        bayrak:"🇮🇱",renk:"#1a1a2e",vurgu:"#4fc3f7",mic:"he-IL",mods:["Alefbet","Gramer","Konuşma","Metin"],cats:["Genel","Günlük Hayat","Dini Metinler","Akademik"]},
   {id:"persian",ad:"Farsça",bayrak:"🇮🇷",mic:"fa-IR",vurgu:"#4CAF50",renk:"#388E3C"},
+  {id:"persian",ad:"Farsça",bayrak:"🇮🇷",renk:"#1b5e20",vurgu:"#4CAF50",mic:"fa-IR",mods:["Modern","Klasik","Konuşma"],cats:["Genel","Kültür","Edebiyat"]},
   {id:"kurdish",ad:"Kürtçe",         bayrak:"🟡",renk:"#1a1a0e",vurgu:"#ffd600",mic:"tr-TR",mods:["Kurmanci","Zazaca","Gramer","Konuşma"],cats:["Genel","Günlük Hayat","Kültür","Akademik"]},
   {id:"syriac", ad:"Süryanice",       bayrak:"🏛️",renk:"#1a0e1a",vurgu:"#ce93d8",mic:"tr-TR",mods:["Alfabe","Gramer","Klasik Metin","Konuşma"],cats:["Genel","Klasik","Dini Metinler","Akademik"]},
 ];
@@ -412,6 +421,11 @@ syriac:[
   {id:"sy6",ad:"Öğrt. Narin",        yer:"Mardin",  uz:"Çocuk Süryanicesi",     p:4.7,n:250,c:true},
 ], 
 persian:[
+    {id:"p1",ad:"Ustad Reza",yer:"Tahran",uz:"Modern Farsça",p:4.8,n:1200,c:false},
+    {id:"p2",ad:"Dr. Maryam",yer:"İsfahan",uz:"Farsça Edebiyat",p:4.7,n:980,c:false},
+    {id:"p3",ad:"Hafız Kemal",yer:"Şiraz",uz:"Klasik Farsça",p:4.9,n:760,c:false}
+  ],
+  persian:[
     {id:"p1",ad:"Ustad Reza",yer:"Tahran",uz:"Modern Farsça",p:4.8,n:1200,c:false},
     {id:"p2",ad:"Dr. Maryam",yer:"İsfahan",uz:"Farsça Edebiyat",p:4.7,n:980,c:false},
     {id:"p3",ad:"Hafız Kemal",yer:"Şiraz",uz:"Klasik Farsça",p:4.9,n:760,c:false}
