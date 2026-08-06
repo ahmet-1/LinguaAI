@@ -411,7 +411,12 @@ syriac:[
   {id:"sy5",ad:"Öğrt. Rami",         yer:"Midyat",  uz:"Çocuklara Süryanice",   p:4.8,n:290,c:true},
   {id:"sy6",ad:"Öğrt. Narin",        yer:"Mardin",  uz:"Çocuk Süryanicesi",     p:4.7,n:250,c:true},
 ], 
-kurdish:[
+persian:[
+    {id:"p1",ad:"Ustad Reza",yer:"Tahran",uz:"Modern Farsça",p:4.8,n:1200,c:false},
+    {id:"p2",ad:"Dr. Maryam",yer:"İsfahan",uz:"Farsça Edebiyat",p:4.7,n:980,c:false},
+    {id:"p3",ad:"Hafız Kemal",yer:"Şiraz",uz:"Klasik Farsça",p:4.9,n:760,c:false}
+  ],
+  kurdish:[
     {id:"kd1",ad:"Dr. Serdar Kaya",yer:"Diyarbakır",uz:"Kurmanci Gramer",p:4.8,n:620,c:false},
     {id:"kd2",ad:"Prof. Zinar Baran",yer:"Mardin",uz:"Zazaca ve Kurmanci",p:4.9,n:540,c:false},
     {id:"kd3",ad:"Dr. Rojda Yilmaz",yer:"Van",uz:"Modern Kürtçe",p:4.8,n:480,c:false},
