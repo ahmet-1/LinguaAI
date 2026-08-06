@@ -754,7 +754,6 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
-  const isMobile = window.innerWidth <= 768;
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
@@ -838,7 +837,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     const ad = kul?.ad?.split(" ")[0]||"";
     const besmele = BESMELE_DILLER.includes(dilId) ? BESMELE_METNI : "";
     // Önceki ders geçmişini al
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
     const devamMesaj = sonDers 
       ? "Son dersimizde "+sonDers.kategori+" konusunu işlemiştik. Kaldığımız yerden devam edelim.\n\n"
@@ -923,7 +922,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
-    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const oncekiDersler = kul?.id ? getDG(kul.id, dilId) : [];
     const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
 
     const buSeviyeMufredat = getMufredat(dilId, seviye);
@@ -1233,7 +1232,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       }).catch(()=>{});
       // Mesajları Supabase'e kaydet
       fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs].filter(m=>m.r&&m.t)})
+        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs]})
       }).catch(()=>{});
       const idx = Math.min(Math.floor((gecmis.length+1)/5), SEVIYELER.length-1);
       const yeniSv = SEVIYELER[idx];
@@ -1263,10 +1262,10 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{textAlign:"center",marginBottom:20}}>
             <div style={{fontSize:40,marginBottom:8}}>📝</div>
             <div style={{color:K.tx,fontSize:20,fontWeight:800}}>Orta Seviye Kontrolü</div>
-            <div style={{color:K.tx4,fontSize:isMobile?17:13,marginTop:6}}>{seviye} seviyesi — 10. ders tamamlandı</div>
+            <div style={{color:K.tx4,fontSize:13,marginTop:6}}>{seviye} seviyesi — 10. ders tamamlandı</div>
           </div>
           <div style={{background:K.bg3,borderRadius:12,padding:16,marginBottom:16}}>
-            <div style={{color:K.tx2,fontSize:isMobile?17:13,fontWeight:700,marginBottom:10}}>Bu kontrolde ölçülecekler:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>Bu kontrolde ölçülecekler:</div>
             {["📖 Okuma — Metni anlayabiliyor musun?","✍️ Yazma — Doğru cümle kurabilir misin?","👂 Anlama — Soruları cevaplayabiliyor musun?","🗣️ Telaffuz — Kelimeleri doğru söylüyor musun?"].map((m,i)=>(
               <div key={i} style={{color:K.tx3,fontSize:12,padding:"5px 0",borderBottom:i<3?"1px solid "+K.bdr:"none"}}>{m}</div>
             ))}
@@ -1302,7 +1301,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{textAlign:"center",marginBottom:20}}>
             <div style={{fontSize:40,marginBottom:8}}>🎓</div>
             <div style={{color:K.tx,fontSize:20,fontWeight:800}}>Seviye Sonu Sınavı</div>
-            <div style={{color:K.tx4,fontSize:isMobile?17:13,marginTop:6}}>{seviye} seviyesi tamamlandı!</div>
+            <div style={{color:K.tx4,fontSize:13,marginTop:6}}>{seviye} seviyesi tamamlandı!</div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
             {[
@@ -1312,7 +1311,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
               {ad:"🗣️ Konuşma",puan:25},
             ].map((b,i)=>(
               <div key={i} style={{background:K.bg3,borderRadius:10,padding:14,textAlign:"center"}}>
-                <div style={{color:K.tx,fontSize:isMobile?17:13,fontWeight:700}}>{b.ad}</div>
+                <div style={{color:K.tx,fontSize:13,fontWeight:700}}>{b.ad}</div>
                 <div style={{color:K.gL,fontSize:22,fontWeight:900,marginTop:4}}>{b.puan}</div>
                 <div style={{color:K.tx4,fontSize:10}}>puan</div>
               </div>
@@ -1347,11 +1346,11 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{display:"flex",justifyContent:"center",marginBottom:16}}><Av h={hoca} dil={dil} sz={80}/></div>
           <div style={{color:K.tx,fontSize:20,fontWeight:800,marginBottom:4}}>{hoca.ad}</div>
           <div style={{color:dil.vurgu,fontSize:12,marginBottom:4}}>{hoca.yer}</div>
-          <div style={{color:K.tx3,fontSize:isMobile?17:13,marginBottom:20}}>{hoca.uz}</div>
+          <div style={{color:K.tx3,fontSize:13,marginBottom:20}}>{hoca.uz}</div>
 
           {/* SEVİYE SEÇİMİ */}
           <div style={{marginBottom:20}}>
-            <div style={{color:K.tx2,fontSize:isMobile?17:13,fontWeight:700,marginBottom:10}}>📊 Seviyeni Seç:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>📊 Seviyeni Seç:</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,justifyContent:"center"}}>
               {["A1","A2","B1","B2","C1","C2"].map(sv=>(
                 <button key={sv} onClick={()=>setSeviye(sv)}
@@ -1359,7 +1358,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                     background:seviye===sv?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.bg3,
                     color:seviye===sv?"#fff":K.tx3,border:"1px solid "+(seviye===sv?K.g3:K.bdr),
                     textAlign:"center",minWidth:60}}>
-                  <div style={{fontSize:isMobile?17:13,fontWeight:700}}>{sv}</div>
+                  <div style={{fontSize:13,fontWeight:700}}>{sv}</div>
                   <div style={{fontSize:9,opacity:0.8,marginTop:1}}>
                     {sv==="A1"?"Başlangıç":sv==="A2"?"Temel":sv==="B1"?"Orta":sv==="B2"?"Orta Üst":sv==="C1"?"İleri":"Uzman"}
                   </div>
@@ -1372,7 +1371,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           </div>
 
           {dil.cats && <>
-            <div style={{color:K.tx2,fontSize:isMobile?17:13,fontWeight:700,marginBottom:10}}>📚 Konu Kategorisi:</div>
+            <div style={{color:K.tx2,fontSize:13,fontWeight:700,marginBottom:10}}>📚 Konu Kategorisi:</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,justifyContent:"center",marginBottom:20}}>
               {dil.cats.map(cat=>(
                 <button key={cat} onClick={()=>setKategori(cat)}
@@ -1451,7 +1450,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:isMobile?"none":"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
@@ -1727,9 +1726,9 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
   };
 
   const gI={width:"100%",padding:"10px 12px",background:K.bg3,border:"1px solid "+K.bdr,
-    borderRadius:9,color:K.tx,fontSize:isMobile?17:13,outline:"none",boxSizing:"border-box",marginBottom:11};
+    borderRadius:9,color:K.tx,fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:11};
   const kd={background:K.card,borderRadius:12,padding:16,border:"1px solid "+K.bdr,marginBottom:14};
-  const bG={padding:"10px 18px",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:isMobile?17:13,
+  const bG={padding:"10px 18px",borderRadius:9,cursor:"pointer",fontWeight:700,fontSize:13,
     border:"none",background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff"};
 
   const SEKMELER=[
@@ -1824,7 +1823,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
             value={kulArama||""}
             onChange={e=>setKulArama(e.target.value)}
             style={{width:"100%",padding:"10px 14px",background:K.bg3,border:"1px solid "+K.bdr,
-              borderRadius:9,color:K.tx,fontSize:isMobile?17:13,outline:"none",marginBottom:14,boxSizing:"border-box"}}
+              borderRadius:9,color:K.tx,fontSize:13,outline:"none",marginBottom:14,boxSizing:"border-box"}}
           />
             {kullaniciListesi.length===0?<div style={{...kd,color:K.tx4,textAlign:"center",padding:30}}>Henüz kayıtlı kullanıcı yok</div>:(
             <div style={{...kd,padding:0,overflow:"hidden"}}>
@@ -1895,7 +1894,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                   if(dersler.length===0) return null;
                   return (
                     <div key={d.id} style={{background:K.bg3,borderRadius:10,padding:12,marginBottom:8}}>
-                      <div style={{color:K.tx,fontWeight:600,fontSize:isMobile?17:13,marginBottom:6}}>
+                      <div style={{color:K.tx,fontWeight:600,fontSize:13,marginBottom:6}}>
                         {d.bayrak} {d.ad} — {getSV(secilenKullanici.id, d.id)} seviye
                       </div>
                       {dersler.slice(-3).map(dr => (
@@ -2104,7 +2103,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               <div key={b.id} style={{...kd,border:"1px solid "+(b.okundu?K.bdr:K.g3),background:b.okundu?K.card:"rgba(46,125,50,0.06)"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                   <div>
-                    <div style={{color:K.tx,fontSize:isMobile?17:13,fontWeight:b.okundu?400:700}}>{b.mesaj}</div>
+                    <div style={{color:K.tx,fontSize:13,fontWeight:b.okundu?400:700}}>{b.mesaj}</div>
                     <div style={{color:K.tx4,fontSize:11,marginTop:4}}>{b.tarih}</div>
                   </div>
                   {!b.okundu&&<button onClick={()=>kaydet({...cfg,bildirimler:(cfg.bildirimler||[]).map(x=>x.id===b.id?{...x,okundu:true}:x)})}
@@ -2186,7 +2185,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
           </div>
           <div style={{display:"flex",alignItems:"center",gap:14}}>
             <button onClick={()=>kaydet(cfg)} style={{...bG,padding:"13px 28px",fontSize:17}}>💾 Kaydet</button>
-            {kayd&&<div style={{color:K.gL,fontSize:isMobile?17:13,fontWeight:600}}>✅ Kaydedildi!</div>}
+            {kayd&&<div style={{color:K.gL,fontSize:13,fontWeight:600}}>✅ Kaydedildi!</div>}
           </div>
         </>}
 
@@ -2215,7 +2214,7 @@ export default function App() {
           setSbDersler(gruplu);
           // localStorage'a da kaydet
           Object.keys(gruplu).forEach(dilId=>{
-            setDG(String(kul.id), dilId, gruplu[dilId]);
+            setDG(kul.id, dilId, gruplu[dilId]);
           });
         }
       }).catch(()=>{});
@@ -2619,7 +2618,7 @@ const kulGiris = u => {
           <div style={{color:K.tx,fontSize:16,fontWeight:700,marginBottom:12}}>📊 Dil Seviyelerin</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:24}}>
             {DILLER.map(d=>{
-              const dersler = getDG(String(kul.id),d.id);
+              const dersler = getDG(kul.id,d.id);
               if(dersler.length===0) return null;
               const sv = getSV(kul.id,d.id);
               return(
@@ -2639,7 +2638,7 @@ const kulGiris = u => {
           </div>
 
           {DILLER.map(d=>{
-            const dersler = getDG(String(kul.id),d.id);
+            const dersler = getDG(kul.id,d.id);
             if(dersler.length===0) return null;
             return(
               <div key={d.id} style={{background:K.card,borderRadius:14,padding:16,border:"1px solid "+K.bdr,marginBottom:14}}>
@@ -2659,8 +2658,8 @@ const kulGiris = u => {
                         <div style={{background:"rgba(46,125,50,0.15)",color:K.gL,borderRadius:6,padding:"2px 8px",fontSize:12,fontWeight:700}}>{dr.seviye}</div>
                         <button onClick={()=>{
                           if(!window.confirm("Bu ders kaydı silinsin mi?"))return;
-                          const yeniDersler=getDG(String(kul.id),d.id).filter(x=>x.id!==dr.id);
-                          setDG(String(kul.id),d.id,yeniDersler);
+                          const yeniDersler=getDG(kul.id,d.id).filter(x=>x.id!==dr.id);
+                          setDG(kul.id,d.id,yeniDersler);
                           fetch("/api/dersler?id="+dr.id,{method:"DELETE"}).catch(()=>{});
                         }} style={{background:"none",border:"none",color:"#ef5350",cursor:"pointer",fontSize:15,padding:"2px 6px"}}>🗑</button>
                       </div>
@@ -2687,7 +2686,7 @@ const kulGiris = u => {
             );
           }).filter(Boolean)}
 
-          {DILLER.every(d=>getDG(String(kul.id),d.id).length===0)&&(
+          {DILLER.every(d=>getDG(kul.id,d.id).length===0)&&(
             <div style={{background:K.card,borderRadius:12,padding:30,border:"1px solid "+K.bdr,textAlign:"center",color:K.tx4}}>
               Henüz ders geçmişin yok. Hemen başla! 🚀
             </div>
