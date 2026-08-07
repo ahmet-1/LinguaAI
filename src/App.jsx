@@ -939,8 +939,8 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   },[dilMod]);
 
   useEffect(()=>{sonRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
-  useEffect(()=>{const p=document.getElementById("sol-panel");if(p)p.style.display=window.innerWidth<=768?"none":"flex";},[]);/*sol-panel-gizle*/
-  useEffect(()=>{const p=document.getElementById("sol-panel");if(p&&window.innerWidth<=768)p.style.display="none";},[]);// sol-panel-hide
+
+// sol-panel-hide
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
@@ -1472,7 +1472,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div id="sol-panel" style={{width:isMobile?0:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:isMobile?0:10,display:isMobile?"none":"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div style={{width:isMobile?0:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:isMobile?0:10,display:isMobile?"none":"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
