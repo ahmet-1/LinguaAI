@@ -770,6 +770,8 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
+  const [isMobile, setIsMobile] = useState(()=>window.innerWidth<=768);
+  useEffect(()=>{ const fn=()=>setIsMobile(window.innerWidth<=768); window.addEventListener("resize",fn); return ()=>window.removeEventListener("resize",fn); },[]);
   const isMobile = window.innerWidth <= 768;
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
@@ -1471,7 +1473,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div id="sol-panel" style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div id="sol-panel" style={{width:isMobile?0:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:isMobile?0:10,display:isMobile?"none":"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
@@ -1560,7 +1562,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                   <div style={{fontSize:10,color:K.tx4,marginBottom:2,textAlign:m.r==="user"?"right":"left"}}>
                     {m.r==="user"?"Sen":"🤖 "+hoca.ad.split(" ")[0]}
                   </div>
-                  <div style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:20,lineHeight:2.1,whiteSpace:"pre-wrap",
+                  <div style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:isMobile?20:16,lineHeight:isMobile?2.1:1.9,whiteSpace:"pre-wrap",
                     background:m.r==="user"?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.card,
                     borderBottomRightRadius:m.r==="user"?4:16,
                     borderBottomLeftRadius:m.r==="ai"?4:16,
