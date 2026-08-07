@@ -73,4 +73,4 @@ export default async function handler(req, res) {
   } catch (e) {
     res.status(500).json({ error: "Sunucu hatası" });
   }
-}
+}//Sat Aug  8 01:34:29 +03 2026
