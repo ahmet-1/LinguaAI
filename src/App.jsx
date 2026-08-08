@@ -1455,6 +1455,11 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           <div style={{color:"#fff",fontWeight:700,fontSize:14}}>{hoca.ad}</div>
           <div style={{color:dil.vurgu,fontSize:11}}>{hoca.yer+" • "+hoca.uz}</div>
         </div>
+        <div style={{background:"rgba(0,0,0,0.25)",borderRadius:8,padding:"4px 10px",textAlign:"center",display:"flex",gap:8,alignItems:"center"}}>
+          <span style={{color:"#fff",fontSize:11}}>{kategori}</span>
+          <span style={{color:dil.vurgu,fontSize:11}}>•</span>
+          <span style={{color:"#fff",fontSize:11}}>{dilLabel}</span>
+        </div>
         <div style={{background:"rgba(0,0,0,0.3)",borderRadius:8,padding:"3px 10px",textAlign:"center"}}>
           <div style={{fontSize:9,color:"#aaa"}}>SEVİYE</div>
           <div style={{fontWeight:800,color:K.gL,fontSize:17}}>{seviye}</div>
@@ -1561,7 +1566,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                   <div style={{fontSize:10,color:K.tx4,marginBottom:2,textAlign:m.r==="user"?"right":"left"}}>
                     {m.r==="user"?"Sen":"🤖 "+hoca.ad.split(" ")[0]}
                   </div>
-                  <div style={{padding:"14px 18px",borderRadius:16,color:K.tx,fontSize:22,lineHeight:2.2,whiteSpace:"pre-wrap",
+                  <div style={{padding:"16px 20px",borderRadius:16,color:K.tx,fontSize:22,lineHeight:2.3,whiteSpace:"pre-wrap",
                     background:m.r==="user"?"linear-gradient(135deg,"+K.g2+","+K.t2+")":K.card,
                     borderBottomRightRadius:m.r==="user"?4:16,
                     borderBottomLeftRadius:m.r==="ai"?4:16,
