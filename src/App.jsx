@@ -1184,7 +1184,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 5000); // 5 saniye kayıt
+      setTimeout(() => mediaRecorder.stop(), 30000); // 30 saniye kayıt
     } catch (e) {
       setTelaffuzSonuc({ error: "Mikrofon erişimi gerekli." });
     }
