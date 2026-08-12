@@ -1455,11 +1455,17 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             <div style={{fontWeight:800,color:sure<300?K.errL:dil.vurgu,fontSize:19}}>{mm}:{ss}</div>
           </div>
         )}
+        <button onClick={()=>{
+            const sonMesaj=[...msgs].reverse().find(m=>m.r==="ai");
+            const testMetni=sonMesaj?sonMesaj.t.split(".")[0]:"Merhaba";
+            setTelaffuzAcik(true);setTelaffuzSonuc(null);telaffuzTesti(testMetni);
+          }} style={{background:"rgba(249,168,37,0.15)",border:"none",color:K.warn,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🎯 Test</button>
+        <div style={{background:"rgba(0,0,0,0.25)",borderRadius:8,padding:"4px 8px",fontSize:10,color:"#aaa"}}>📷 Yakında</div>
         <button onClick={dersKapat} style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontWeight:700}}>✕ Çıkış</button>
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        <div style={{width:185,background:K.bg2,borderRight:"1px solid "+K.bdr,padding:10,display:"flex",flexDirection:"column",gap:8,overflowY:"auto"}}>
+        <div style={{width:0,display:"none"}}>
           <div style={{background:K.card,borderRadius:10,padding:12,border:"1px solid "+K.bdr2,textAlign:"center"}}>
             <div style={{fontSize:9,color:K.tx4,marginBottom:8,fontWeight:700,letterSpacing:1}}>AI HOCAN</div>
             <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><Av h={hoca} dil={dil} sz={72}/></div>
