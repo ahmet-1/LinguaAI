@@ -1125,7 +1125,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         setYazi("");
         if (e.error === "no-speech") {
           // Sessizlik - tekrar dinle
-          if (konusmaRef.current) setTimeout(mikDinle, 1000);
+          if (konusmaRef.current) setTimeout(mikDinle, 2000);
         } else if (e.error === "not-allowed") {
           setMikErr("Mikrofon izni reddedildi. Tarayıcı ayarlarından izin ver.");
           konusmaRef.current = false;
@@ -1138,9 +1138,9 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       
       r.onend = () => {
         setMikr(false);
-        // Sadece sonuc gonderilmediyse tekrar dinle (hoca konusurken dinleme)
-        if (konusmaRef.current && !yukl && !sonucGonderildi) {
-          setTimeout(mikDinle, 1500);
+        // Sadece sonuc gonderilmediyse ve sesli mod aktifse tekrar dinle
+        if (konusmaRef.current && !yukl && !sonucGonderildi && sesliModRef.current) {
+          setTimeout(mikDinle, 2000);
         }
       };
       
