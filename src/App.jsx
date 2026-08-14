@@ -2301,6 +2301,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                   <div style={{color:K.tx,fontWeight:700}}>{u.ad}</div>
                   <div style={{color:K.tx4,fontSize:11,marginTop:2}}>{u.email} • {u.plan} • {u.durum}</div>
                   <div style={{color:K.tx4,fontSize:10}}>Üye: {u.created_at?new Date(u.created_at).toLocaleDateString("tr-TR"):"-"}</div>
+                  <div style={{color:K.tx4,fontSize:10}}>Üye: {u.created_at?new Date(u.created_at).toLocaleDateString("tr-TR"):"-"}</div>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <div style={{background:"rgba(46,125,50,0.12)",color:K.gL,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700}}>{u.durum}</div>
