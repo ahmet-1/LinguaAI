@@ -2727,9 +2727,12 @@ const kulGiris = u => {
     if(kul.durum==="Aktif") return true;
     if(kul.hediye===true) return true;
     if(kul.plan && kul.plan!=="Deneme") return true;
-    if(kul.durum==="Deneme") return true;
-    const ts = parseInt(kul.trialStart || kul.trial_start || Date.now());
-    return (Date.now()-ts)/86400000 < 5;
+    if(kul.durum==="Deneme") {
+      const ts = parseInt(kul.trial_start ? new Date(kul.trial_start).getTime() : (kul.trialStart || 0));
+      if(!ts) return false;
+      return (Date.now()-ts)/86400000 < 5;
+    }
+    return false;
   };
 
   const git = s => { setSayfa(s); setDilSec(null); window.history.pushState({sayfa:s},"",""); };
