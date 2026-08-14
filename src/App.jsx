@@ -235,26 +235,44 @@ async function loadMsgsFromDB(userId, dilId, hocaId) {
 // Mesajları Supabase'e kaydet
 async function saveMsgsToDB(userId, dilId, hocaId, messages) {
   try {
-    await fetch(SB_URL, {
+    const res = await fetch("/api/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, dilId, hocaId, messages })
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        userId,
+        dilId,
+        hocaId,
+        messages
+      })
     });
-  } catch (e) {
-    console.log("DB kayıt hatası:", e.message);
-  }
-}
 
-// Kullanıcıyı Supabase'e kaydet
-async function saveUserToDB(user) {
-  try {
-    await fetch(SB_USR, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(user)
-    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      console.error(
+        "DERS SENKRON KAYIT HATASI:",
+        res.status,
+        data
+      );
+      return false;
+    }
+
+    console.log(
+      "DERS SENKRON KAYIT OK:",
+      data
+    );
+
+    return true;
+
   } catch (e) {
-    console.log("Kullanıcı kayıt hatası:", e.message);
+    console.error(
+      "DERS SENKRON BAĞLANTI HATASI:",
+      e
+    );
+
+    return false;
   }
 }
 
