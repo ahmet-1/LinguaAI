@@ -776,27 +776,128 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     } catch { return []; }
   });
 
-  // Supabase'den mesajları yükle
-  useEffect(() => {
-    const uid = kul?.id ? String(kul.id) : "admin";
-    if (!uid || !dilId || !hoca?.id) return;
-    loadMsgsFromDB(uid, dilId, hoca.id).then(dbMsgs => {
-      if (dbMsgs && dbMsgs.length > 0) {
-        setMsgs(dbMsgs);
-        if (DERS_KEY) {
-          try { localStorage.setItem(DERS_KEY, JSON.stringify(dbMsgs)); } catch {}
-        }
-      }
-    });
-  }, []);
+  // ============================================================
+  // PC <-> MOBİL CANLI DERS SENKRONİZASYONU
+  // Supabase ana kayıt noktasıdır.
+  // localStorage yalnızca hızlı açılış için önbellektir.
+  // ============================================================
 
-  // Mesajları otomatik kaydet
+  const uid = kul?.id ? String(kul.id) : "admin";
+
+  // İlk açılışta Supabase'deki gerçek ders geçmişini yükle
+  useEffect(() => {
+    if (!uid || !dilId || !hoca?.id) return;
+
+    let aktif = true;
+
+    const yukle = async () => {
+      const dbMsgs = await loadMsgsFromDB(uid, dilId, hoca.id);
+
+      if (!aktif || !dbMsgs) return;
+
+      setMsgs(dbMsgs);
+
+      if (DERS_KEY) {
+        try {
+          localStorage.setItem(DERS_KEY, JSON.stringify(dbMsgs));
+        } catch {}
+      }
+    };
+
+    yukle();
+
+    return () => {
+      aktif = false;
+    };
+  }, [uid, dilId, hoca?.id]);
+
+  // ------------------------------------------------------------
+  // CANLI SENKRON:
+  // Telefon veya PC'de konuşma değiştiğinde diğer cihaz
+  // en geç 2 saniye içinde Supabase'den güncel konuşmayı alır.
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (!uid || !dilId || !hoca?.id) return;
+
+    let aktif = true;
+
+    const senkronizeEt = async () => {
+      const dbMsgs = await loadMsgsFromDB(uid, dilId, hoca.id);
+
+      if (!aktif || !dbMsgs) return;
+
+      setMsgs(mevcut => {
+        const ayni =
+          mevcut.length === dbMsgs.length &&
+          mevcut.every((m, i) =>
+            m?.r === dbMsgs[i]?.r &&
+            m?.t === dbMsgs[i]?.t
+          );
+
+        if (ayni) return mevcut;
+
+        if (DERS_KEY) {
+          try {
+            localStorage.setItem(DERS_KEY, JSON.stringify(dbMsgs));
+          } catch {}
+        }
+
+        return dbMsgs;
+      });
+    };
+
+    const interval = setInterval(senkronizeEt, 2000);
+
+    return () => {
+      aktif = false;
+      clearInterval(interval);
+    };
+  }, [uid, dilId, hoca?.id, DERS_KEY]);
+
+  // ------------------------------------------------------------
+  // MESAJ KAYDET
+  // Önce ekranda gösterir, sonra Supabase'e kaydeder.
+  // localStorage artık 100 mesajla SINIRLI DEĞİL.
+  // ------------------------------------------------------------
   const msgKaydet = (yeniMsgs) => {
-    setMsgs(yeniMsgs);
-    if (DERS_KEY) {
-      try { localStorage.setItem(DERS_KEY, JSON.stringify(yeniMsgs.slice(-100))); } catch {}
-    }
-  };
+  const idliMsgs = yeniMsgs.map(msg => ({
+    id:
+      msg.id ||
+      (
+        typeof crypto !== "undefined" &&
+        crypto.randomUUID
+          ? crypto.randomUUID()
+          : "msg_" +
+            Date.now() +
+            "_" +
+            Math.random()
+              .toString(36)
+              .slice(2)
+      ),
+    r: msg.r,
+    t: msg.t
+  }));
+
+  setMsgs(idliMsgs);
+
+  if (DERS_KEY) {
+    try {
+      localStorage.setItem(
+        DERS_KEY,
+        JSON.stringify(idliMsgs)
+      );
+    } catch {}
+  }
+
+  if (uid && dilId && hoca?.id) {
+    saveMsgsToDB(
+      uid,
+      dilId,
+      hoca.id,
+      idliMsgs
+    );
+  }
+};
   const [yazi, setYazi] = useState("");
   const [yukl, setYukl] = useState(false);
   const [mikr, setMikr] = useState(false);
