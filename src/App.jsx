@@ -2728,7 +2728,8 @@ const kulGiris = u => {
     if(kul.hediye===true) return true;
     if(kul.plan && kul.plan!=="Deneme") return true;
     if(kul.durum==="Deneme") {
-      const ts = parseInt(kul.trial_start ? new Date(kul.trial_start).getTime() : (kul.trialStart || 0));
+      const tsRaw = kul.trial_start || kul.trialStart || 0;
+      const ts = typeof tsRaw === "string" && tsRaw.includes("T") ? new Date(tsRaw).getTime() : parseInt(tsRaw) || 0;
       if(!ts) return false;
       return (Date.now()-ts)/86400000 < 5;
     }
