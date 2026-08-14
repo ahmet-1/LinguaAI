@@ -12,7 +12,9 @@ export default async function handler(req, res) {
   const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY;
 
   if (!SUPA_URL || !SUPA_KEY) {
-    res.status(500).json({ error: "Supabase yapılandırması eksik" });
+    res.status(500).json({
+      error: "Supabase yapılandırması eksik"
+    });
     return;
   }
 
@@ -23,25 +25,43 @@ export default async function handler(req, res) {
   };
 
   try {
+
+    // ============================================================
+    // GET
+    // Supabase'deki TEK GERÇEK sohbet geçmişini getirir.
+    // Sıralama created_at'a değil, bigint primary key olan id'ye göre
+    // yapılır. Böylece iki cihazdaki sıra değişmez.
+    // ============================================================
     if (req.method === "GET") {
-      const { userId, dilId, hocaId } = req.query;
+      const {
+        userId,
+        dilId,
+        hocaId
+      } = req.query;
 
       if (!userId || !dilId || !hocaId) {
-        res.status(400).json({ error: "Eksik parametre" });
+        res.status(400).json({
+          error: "Eksik parametre"
+        });
         return;
       }
 
       const url =
         SUPA_URL +
         "/rest/v1/ders_mesajlar" +
-        "?user_id=eq." + encodeURIComponent(userId) +
-        "&dil_id=eq." + encodeURIComponent(dilId) +
-        "&hoca_id=eq." + encodeURIComponent(hocaId) +
-        "&select=client_id,role,content,created_at" +
-        "&order=created_at.asc" +
+        "?user_id=eq." +
+        encodeURIComponent(String(userId)) +
+        "&dil_id=eq." +
+        encodeURIComponent(String(dilId)) +
+        "&hoca_id=eq." +
+        encodeURIComponent(String(hocaId)) +
+        "&select=id,client_id,role,content,created_at" +
+        "&order=id.asc" +
         "&limit=5000";
 
-      const response = await fetch(url, { headers });
+      const response = await fetch(url, {
+        headers
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -55,20 +75,45 @@ export default async function handler(req, res) {
 
       const data = await response.json();
 
-      res.status(200).json(
-        (data || []).map(message => ({
+      const sonuc = (data || [])
+        .filter(
+          message =>
+            message &&
+            typeof message.role === "string" &&
+            typeof message.content === "string"
+        )
+        .map(message => ({
           id:
-            message.client_id ||
-            crypto.randomUUID(),
+            typeof message.client_id === "string" &&
+            message.client_id.trim()
+              ? message.client_id
+              : "db_" + String(message.id),
+
           r: message.role,
           t: message.content
-        }))
-      );
+        }));
 
+      res.status(200).json(sonuc);
       return;
     }
 
+    // ============================================================
+    // POST
+    //
+    // Burada artık "sohbetin tamamını kaydet" mantığı yok.
+    //
+    // Gelen messages listesindeki her mesajın client_id'si benzersiz.
+    // Supabase'de mevcut olan mesaj tekrar eklenmez.
+    //
+    // Böylece:
+    //
+    // PC -> mesaj A
+    // Telefon -> mesaj B
+    //
+    // birbirinin üzerine yazamaz.
+    // ============================================================
     if (req.method === "POST") {
+
       const {
         userId,
         dilId,
@@ -77,7 +122,9 @@ export default async function handler(req, res) {
       } = req.body || {};
 
       if (!userId || !dilId || !hocaId) {
-        res.status(400).json({ error: "Eksik parametre" });
+        res.status(400).json({
+          error: "Eksik parametre"
+        });
         return;
       }
 
@@ -91,7 +138,10 @@ export default async function handler(req, res) {
       const temizMesajlar = messages.filter(
         message =>
           message &&
+          typeof message.id === "string" &&
+          message.id.trim() !== "" &&
           typeof message.r === "string" &&
+          message.r.trim() !== "" &&
           typeof message.t === "string" &&
           message.t.trim() !== ""
       );
@@ -104,26 +154,13 @@ export default async function handler(req, res) {
         return;
       }
 
-      const eksikId = temizMesajlar.some(
-        message =>
-          !message.id ||
-          typeof message.id !== "string"
-      );
-
-      if (eksikId) {
-        res.status(400).json({
-          error: "Mesajlarda benzersiz id bulunamadı"
-        });
-        return;
-      }
-
       const rows = temizMesajlar.map(message => ({
         user_id: String(userId),
         dil_id: String(dilId),
         hoca_id: String(hocaId),
         client_id: String(message.id),
-        role: message.r,
-        content: message.t
+        role: String(message.r),
+        content: String(message.t)
       }));
 
       const response = await fetch(
@@ -132,11 +169,13 @@ export default async function handler(req, res) {
         "?on_conflict=user_id,dil_id,hoca_id,client_id",
         {
           method: "POST",
+
           headers: {
             ...headers,
             Prefer:
               "resolution=ignore-duplicates,return=minimal"
           },
+
           body: JSON.stringify(rows)
         }
       );
@@ -165,7 +204,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     res.status(500).json({
-      error: error.message || "Sunucu hatası"
+      error:
+        error?.message ||
+        "Sunucu hatası"
     });
   }
 }

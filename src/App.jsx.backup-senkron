@@ -235,44 +235,26 @@ async function loadMsgsFromDB(userId, dilId, hocaId) {
 // Mesajları Supabase'e kaydet
 async function saveMsgsToDB(userId, dilId, hocaId, messages) {
   try {
-    const res = await fetch("/api/messages", {
+    await fetch(SB_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        userId,
-        dilId,
-        hocaId,
-        messages
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, dilId, hocaId, messages })
     });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      console.error(
-        "DERS SENKRON KAYIT HATASI:",
-        res.status,
-        data
-      );
-      return false;
-    }
-
-    console.log(
-      "DERS SENKRON KAYIT OK:",
-      data
-    );
-
-    return true;
-
   } catch (e) {
-    console.error(
-      "DERS SENKRON BAĞLANTI HATASI:",
-      e
-    );
+    console.log("DB kayıt hatası:", e.message);
+  }
+}
 
-    return false;
+// Kullanıcıyı Supabase'e kaydet
+async function saveUserToDB(user) {
+  try {
+    await fetch(SB_USR, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(user)
+    });
+  } catch (e) {
+    console.log("Kullanıcı kayıt hatası:", e.message);
   }
 }
 
@@ -794,231 +776,27 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     } catch { return []; }
   });
 
-  // ============================================================
-  // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
-  //
-  // Supabase TEK GERÇEK KAYNAKTIR.
-  // localStorage sadece açılışı hızlandıran önbellektir.
-  //
-  // ÖNEMLİ:
-  // Cihazlar artık bütün sohbeti tekrar tekrar yazmaz.
-  // Sadece YENİ mesajlar Supabase'e gönderilir.
-  // Diğer cihazdan gelen mesajlar mevcut listeyle BİRLEŞTİRİLİR.
-  // ============================================================
-
-  const uid = kul?.id ? String(kul.id) : "admin";
-
-  const mesajIdOlustur = () => {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
-      return crypto.randomUUID();
-    }
-
-    return (
-      "msg_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2)
-    );
-  };
-
-  const mesajNormalize = (msg) => ({
-    id: msg?.id ? String(msg.id) : mesajIdOlustur(),
-    r: msg?.r || "",
-    t: msg?.t || "",
-    createdAt: msg?.createdAt || null
-  });
-
-  const mesajlariBirleştir = (yerel, uzak) => {
-    const map = new Map();
-
-    [...(yerel || []), ...(uzak || [])].forEach(msg => {
-      if (!msg || !msg.t) return;
-
-      const n = mesajNormalize(msg);
-
-      if (!map.has(n.id)) {
-        map.set(n.id, n);
-        return;
-      }
-
-      const eski = map.get(n.id);
-
-      if (!eski.createdAt && n.createdAt) {
-        map.set(n.id, n);
-      }
-    });
-
-    return Array.from(map.values()).sort((a, b) => {
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
-
-      if (ta !== tb) return ta - tb;
-
-      return String(a.id).localeCompare(String(b.id));
-    });
-  };
-
-  // İlk açılış:
-  // Önce localStorage gösterilir, hemen ardından Supabase gerçek geçmişi gelir.
+  // Supabase'den mesajları yükle
   useEffect(() => {
+    const uid = kul?.id ? String(kul.id) : "admin";
     if (!uid || !dilId || !hoca?.id) return;
-
-    let aktif = true;
-
-    const yukle = async () => {
-      const dbMsgs = await loadMsgsFromDB(
-        uid,
-        dilId,
-        hoca.id
-      );
-
-      if (!aktif || !Array.isArray(dbMsgs)) return;
-
-      setMsgs(mevcut => {
-        const birlesik = mesajlariBirleştir(mevcut, dbMsgs);
-
+    loadMsgsFromDB(uid, dilId, hoca.id).then(dbMsgs => {
+      if (dbMsgs && dbMsgs.length > 0) {
+        setMsgs(dbMsgs);
         if (DERS_KEY) {
-          try {
-            localStorage.setItem(
-              DERS_KEY,
-              JSON.stringify(birlesik)
-            );
-          } catch {}
+          try { localStorage.setItem(DERS_KEY, JSON.stringify(dbMsgs)); } catch {}
         }
-
-        return birlesik;
-      });
-    };
-
-    yukle();
-
-    return () => {
-      aktif = false;
-    };
-  }, [uid, dilId, hoca?.id]);
-
-  // ============================================================
-  // CANLI SENKRON
-  // Her 2 saniyede Supabase'den SON DURUM alınır.
-  // Gelen liste yereldekinin üzerine körlemesine yazılmaz.
-  // ID üzerinden birleştirilir.
-  // ============================================================
-
-  useEffect(() => {
-    if (!uid || !dilId || !hoca?.id) return;
-
-    let aktif = true;
-    let calisiyor = false;
-
-    const senkronizeEt = async () => {
-      if (calisiyor) return;
-
-      calisiyor = true;
-
-      try {
-        const dbMsgs = await loadMsgsFromDB(
-          uid,
-          dilId,
-          hoca.id
-        );
-
-        if (!aktif || !Array.isArray(dbMsgs)) return;
-
-        setMsgs(mevcut => {
-          const birlesik = mesajlariBirleştir(
-            mevcut,
-            dbMsgs
-          );
-
-          if (DERS_KEY) {
-            try {
-              localStorage.setItem(
-                DERS_KEY,
-                JSON.stringify(birlesik)
-              );
-            } catch {}
-          }
-
-          return birlesik;
-        });
-      } finally {
-        calisiyor = false;
       }
-    };
-
-    const interval = setInterval(
-      senkronizeEt,
-      2000
-    );
-
-    return () => {
-      aktif = false;
-      clearInterval(interval);
-    };
-  }, [uid, dilId, hoca?.id, DERS_KEY]);
-
-  // ============================================================
-  // MESAJ KAYDET
-  //
-  // Bu fonksiyon artık verilen listeyi mevcut listenin yerine
-  // koymaz.
-  //
-  // Sadece yeni ID'leri ekler.
-  // Böylece telefon eski listeyle kayıt gönderip PC'deki yeni
-  // mesajları EZEMEZ.
-  // ============================================================
-
-  const msgKaydet = (yeniMsgs) => {
-    const gelen = (yeniMsgs || [])
-      .filter(msg => msg && msg.t)
-      .map(mesajNormalize);
-
-    if (gelen.length === 0) return;
-
-    setMsgs(mevcut => {
-      const mevcutIds = new Set(
-        mevcut.map(m => String(m.id))
-      );
-
-      const yeni = gelen.filter(
-        m => !mevcutIds.has(String(m.id))
-      );
-
-      const birlesik = mesajlariBirleştir(
-        mevcut,
-        gelen
-      );
-
-      if (DERS_KEY) {
-        try {
-          localStorage.setItem(
-            DERS_KEY,
-            JSON.stringify(birlesik)
-          );
-        } catch {}
-      }
-
-      if (
-        uid &&
-        dilId &&
-        hoca?.id &&
-        yeni.length > 0
-      ) {
-        saveMsgsToDB(
-          uid,
-          dilId,
-          hoca.id,
-          yeni
-        );
-      }
-
-      return birlesik;
     });
-  };
+  }, []);
 
+  // Mesajları otomatik kaydet
+  const msgKaydet = (yeniMsgs) => {
+    setMsgs(yeniMsgs);
+    if (DERS_KEY) {
+      try { localStorage.setItem(DERS_KEY, JSON.stringify(yeniMsgs.slice(-100))); } catch {}
+    }
+  };
   const [yazi, setYazi] = useState("");
   const [yukl, setYukl] = useState(false);
   const [mikr, setMikr] = useState(false);
@@ -1223,186 +1001,75 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
 
   const gonder = async (txt) => {
-    if (!txt || !txt.trim() || yukl) return;
-
+    if (!txt||!txt.trim()||yukl) return;
+    // Rate limit: dakikada max 20 mesaj
     if (!rateLimiter.check("chat_"+kul?.id, 20)) {
-      msgKaydet([{
-        r: "ai",
-        t: "⚠️ Çok hızlı mesaj gönderiyorsunuz. Lütfen bir dakika bekleyin."
-      }]);
+      setMsgs(m=>[...m,{r:"ai",t:"⚠️ Çok hızlı mesaj gönderiyorsunuz. Lütfen bir dakika bekleyin."}]);
       return;
     }
-
     const metin = txt.trim();
-
     if (uygunsuzMu(metin)) {
       const a = getA();
-      const kulIhtarlar = (a.ihtarlar || [])
-        .filter(x => x.email === kul?.email)
-        .length;
-
-      const yeniIhtar = {
-        id: Date.now(),
-        kulAd: kul?.ad || "",
-        email: kul?.email || "",
-        mesaj: metin,
-        tarih: new Date().toLocaleString("tr-TR")
-      };
-
+      const kulIhtarlar = (a.ihtarlar||[]).filter(x=>x.email===kul?.email).length;
+      const yeniIhtar = {id:Date.now(),kulAd:kul?.ad||"",email:kul?.email||"",mesaj:metin,tarih:new Date().toLocaleString("tr-TR")};
+      setA({...a, ihtarlar:[...(a.ihtarlar||[]), yeniIhtar]});
       if (kulIhtarlar >= 2) {
-        setA({
-          ...a,
-          users: (a.users || [])
-            .filter(x => x.email !== kul?.email),
-          ihtarlar: [
-            ...(a.ihtarlar || []),
-            yeniIhtar
-          ]
+        // 3. uyarı - üyeliği sil
+        setA({...a,
+          users:(a.users||[]).filter(x=>x.email!==kul?.email),
+          ihtarlar:[...(a.ihtarlar||[]), yeniIhtar]
         });
-
-        msgKaydet([{
-          r: "ai",
-          t: "🚫 HESABINIZ KALICI OLARAK SİLİNDİ. Uygunsuz içerik politikamızı 3 kez ihlal ettiniz. Bu karar geri alınamaz."
-        }]);
-
-        setTimeout(() => {
-          DB.d("kul");
-          window.location.reload();
-        }, 3000);
+        setMsgs(m=>[...m,{r:"ai",t:"🚫 HESABINIZ KALICI OLARAK SİLİNDİ. Uygunsuz içerik politikamızı 3 kez ihlal ettiniz. Bu karar geri alınamaz."}]);
+        setTimeout(()=>{ DB.d("kul"); window.location.reload(); }, 3000);
       } else {
-        setA({
-          ...a,
-          ihtarlar: [
-            ...(a.ihtarlar || []),
-            yeniIhtar
-          ]
-        });
-
-        msgKaydet([{
-          r: "ai",
-          t: "⚠️ UYARI " +
-            (kulIhtarlar + 1) +
-            "/3: Bu içerik platform kurallarına aykırıdır. 3 uyarıda üyeliğiniz kalıcı olarak silinecektir."
-        }]);
+        setMsgs(m=>[...m,{r:"ai",t:"⚠️ UYARI "+(kulIhtarlar+1)+"/3: Bu içerik platform kurallarına aykırıdır. 3 uyarıda üyeliğiniz kalıcı olarak silinecektir."}]);
       }
-
       return;
     }
-
-    setYazi("");
-    setYukl(true);
-
-    const kullaniciMesaji = {
-      id: mesajIdOlustur(),
-      r: "user",
-      t: metin
-    };
-
-    // Kullanıcı mesajını TEK BAŞINA kaydet.
-    // Böylece diğer cihazdaki geçmişin üzerine yazılmaz.
-    msgKaydet([kullaniciMesaji]);
-
+    setYazi(""); setYukl(true);
+    const yeniMsgs = [...msgs, {r:"user", t:metin}];
+    msgKaydet(yeniMsgs);
     try {
-      // AI geçmişini o anki ekrandaki mesajlardan oluştur.
-      // Kullanıcı mesajını ayrıca ekliyoruz.
-      const history = msgs
-        .filter(m => m && m.r && m.t)
-        .map(m => ({
-          role: m.r === "ai"
-            ? "assistant"
-            : "user",
-          content: m.t
-        }));
-
-      const yan = await aiYanit(
-        [
-          ...history,
-          {
-            role: "user",
-            content: metin
-          }
-        ],
-        getPrompt()
-      );
-
-      const temizYanEkran = yan
-        .replace(/\*+/g, '')
-        .replace(/#{1,6}\s/g, '')
-        .replace(/[🎯🤔😊😀🎉✅❌⭐🔴🟢📚🎓👋🙏✨🌟💡]/gu, '')
+      const history = msgs.filter(m=>m.r).map(m=>({role:m.r==="ai"?"assistant":"user",content:m.t}));
+      const yan = await aiYanit([...history,{role:"user",content:metin}], getPrompt());
+      const guncelMsgs = [...msgs, {r:"user",t:metin}, {r:"ai",t:yan}];
+    const temizYanEkran = yan
+      .replace(/\*+/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/[🎯🤔😊😀🎉✅❌⭐🔴🟢📚🎓👋🙏✨🌟💡]/gu, '')
+      .trim();
+    msgKaydet([...msgs, {r:"user",t:metin}, {r:"ai",t:temizYanEkran}]);
+      // Metni temizle - yıldız, emoji, parantez, noktalama fazlalıkları kaldır
+    const metinTemizle = (txt) => {
+      const yazimDuzelt = (t) => t
+        .replace(/teşekur/gi, "teşekkür")
+        .replace(/merhba/gi, "merhaba")
+        .replace(/hafya/gi, "hafta")
+        .replace(/birse/gi, "bir se");
+      return yazimDuzelt(txt)
+      .replace(/\*+/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/[🎯🤔😊😀🎉✅❌⭐🔴🟢📚🎓👋🙏✨🌟💡]/gu, '')
+      .replace(/\s+/g, ' ')
         .trim();
-
-      const hocaMesaji = {
-        id: mesajIdOlustur(),
-        r: "ai",
-        t: temizYanEkran
-      };
-
-      // AI cevabını da TEK BAŞINA kaydet.
-      msgKaydet([hocaMesaji]);
-
-      const metinTemizle = (txt) => {
-        const yazimDuzelt = (t) => t
-          .replace(/teşekur/gi, "teşekkür")
-          .replace(/merhba/gi, "merhaba")
-          .replace(/hafya/gi, "hafta")
-          .replace(/birse/gi, "bir se");
-
-        return yazimDuzelt(txt)
-          .replace(/\*+/g, '')
-          .replace(/#{1,6}\s/g, '')
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-          .replace(/[🎯🤔😊😀🎉✅❌⭐🔴🟢📚🎓👋🙏✨🌟💡]/gu, '')
-          .replace(/\s+/g, ' ')
-          .trim();
-      };
-
-      const temizYan = metinTemizle(yan);
-
-      if (sesliModRef.current) {
-        const sesDil =
-          dilMod === "hedef"
-            ? dil.mic
-            : "tr-TR";
-
-        const sesMeyin = temizYan
-          .replace(/[*#_~`|]/g, "")
-          .replace(/\|[^|]+\|/g, " ")
-          .replace(/-{2,}/g, " ")
-          .replace(/\s+/g, " ")
-          .trim()
-          .substring(0, 3000);
-
-        sesliOku(
-          sesMeyin,
-          hoca.id,
-          sesDil
-        ).then(() => {
-          if (konusmaRef.current) {
-            setTimeout(
-              mikDinle,
-              1500
-            );
-          }
-        }).catch(() => {
-          if (konusmaRef.current) {
-            setTimeout(
-              mikDinle,
-              1500
-            );
-          }
-        });
-      }
-
-    } catch (e) {
-      msgKaydet([{
-        id: mesajIdOlustur(),
-        r: "ai",
-        t: "Bağlantı hatası: " +
-          e.message +
-          ". Tekrar deneyin."
-      }]);
+    };
+    
+    const temizYan = metinTemizle(yan);
+    
+    // sesliMod=true ise hoca konuşur, false ise sadece yazar
+    if (sesliModRef.current) {
+      const sesDil = dilMod==="hedef" ? dil.mic : "tr-TR";
+      const sesMeyin = temizYan.replace(/[*#_~`|]/g,"").replace(/\|[^|]+\|/g," ").replace(/-{2,}/g," ").replace(/\s+/g," ").trim().substring(0,3000);
+      sesliOku(sesMeyin, hoca.id, sesDil).then(()=>{
+        if(konusmaRef.current) setTimeout(mikDinle, 1500);
+      }).catch(()=>{
+        if(konusmaRef.current) setTimeout(mikDinle, 1500);
+      });
     }
-
+    } catch(e) {
+      setMsgs(m=>[...m,{r:"ai",t:"Bağlantı hatası: "+e.message+". Tekrar deneyin."}]);
+    }
     setYukl(false);
   };
 
@@ -1572,8 +1239,10 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           sure:yeniDers.sure, dilMod, ozet:yeniDers.ozet, tarih:yeniDers.tarih
         })
       }).catch(()=>{});
-      // Mesajlar artık her gönderimde anında Supabase'e kaydediliyor.
-      // Ders kapatılırken bütün geçmiş tekrar POST edilmez.
+      // Mesajları Supabase'e kaydet
+      fetch("/api/messages",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({userId:String(userId),dilId,hocaId:hoca.id,messages:[...msgs]})
+      }).catch(()=>{});
       const idx = Math.min(Math.floor((gecmis.length+1)/5), SEVIYELER.length-1);
       const yeniSv = SEVIYELER[idx];
       setSV(userId,dilId,yeniSv);
