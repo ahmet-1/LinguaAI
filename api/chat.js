@@ -33,8 +33,7 @@ export default async function handler(req, res) {
     res.status(400).json({ error: "Geçersiz istek" });
     return;
   }
-  if (messages.length > 100) {
-    res.status(400).json({ error: "Çok fazla mesaj" });
+  );
     return;
   }
 

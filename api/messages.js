@@ -11,37 +11,40 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const { userId, dilId, hocaId } = req.query;
       if (!userId || !dilId || !hocaId) { res.status(400).json({ error: "Eksik parametre" }); return; }
-      const url = SUPA_URL + "/rest/v1/ders_mesajlar?user_id=eq." + encodeURIComponent(userId) + "&dil_id=eq." + encodeURIComponent(dilId) + "&hoca_id=eq." + encodeURIComponent(hocaId) + "&order=created_at.asc&limit=200";
+      const url = SUPA_URL + "/rest/v1/ders_mesajlar?user_id=eq." + encodeURIComponent(userId) + "&dil_id=eq." + encodeURIComponent(dilId) + "&hoca_id=eq." + encodeURIComponent(hocaId) + "&order=created_at.asc&limit=500";
       const r = await fetch(url, { headers: h });
       const data = await r.json();
       res.status(200).json((data || []).map(d => ({ r: d.role, t: d.content })));
     } else if (req.method === "POST") {
       const { userId, dilId, hocaId, messages } = req.body;
       if (!userId || !dilId || !hocaId) { res.status(400).json({ error: "Eksik parametre" }); return; }
-      const rows = (messages || []).filter(m => m.r && m.t).slice(-100).map(m => ({
-        user_id: String(userId), dil_id: String(dilId), hoca_id: String(hocaId),
-        role: m.r, content: m.t
-      }));
-      await fetch(SUPA_URL + "/rest/v1/ders_mesajlar?user_id=eq." + encodeURIComponent(userId) + "&dil_id=eq." + encodeURIComponent(dilId) + "&hoca_id=eq." + encodeURIComponent(hocaId), {
-        method: "DELETE", headers: h
-      });
-      if (rows.length > 0) {
+      // Mevcut mesaj sayisini al
+      const existUrl = SUPA_URL + "/rest/v1/ders_mesajlar?user_id=eq." + encodeURIComponent(userId) + "&dil_id=eq." + encodeURIComponent(dilId) + "&hoca_id=eq." + encodeURIComponent(hocaId) + "&select=id&order=created_at.asc";
+      const existRes = await fetch(existUrl, { headers: h });
+      const existing = await existRes.json();
+      const existCount = (existing || []).length;
+      // Sadece yeni mesajlari ekle
+      const newMsgs = (messages || []).filter(m => m && m.r && m.t).slice(existCount);
+      if (newMsgs.length > 0) {
+        const rows = newMsgs.map(m => ({
+          user_id: String(userId), dil_id: String(dilId), hoca_id: String(hocaId),
+          role: m.r, content: m.t
+        }));
         const insRes = await fetch(SUPA_URL + "/rest/v1/ders_mesajlar", {
           method: "POST",
           headers: { ...h, "Prefer": "return=minimal" },
           body: JSON.stringify(rows)
         });
-        const insTxt = await insRes.text();
         if (!insRes.ok) {
-          return res.status(200).json({ ok: false, status: insRes.status, error: insTxt });
+          const err = await insRes.text();
+          return res.status(200).json({ ok: false, error: err });
         }
       }
-      res.status(200).json({ ok: true, saved: rows.length });
+      res.status(200).json({ ok: true, saved: newMsgs.length });
     } else {
       res.status(405).json({ error: "Method not allowed" });
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
-}// Fri Jul 17 02:39:17 +03 2026
-// fix
+}
