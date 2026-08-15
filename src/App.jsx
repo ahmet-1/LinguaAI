@@ -1557,7 +1557,14 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 150000); // 150 saniye kayıt
+      let kalan = 150;
+      setTelaffuzSonuc({info:"🎤 Kayıt başladı - "+kalan+" saniye kaldı. Okumaya başlayın..."});
+      const sayac = setInterval(()=>{
+        kalan--;
+        if(kalan>0) setTelaffuzSonuc({info:"🎤 Kayıt devam ediyor... "+kalan+" saniye"});
+        else clearInterval(sayac);
+      },1000);
+      setTimeout(() => { clearInterval(sayac); mediaRecorder.stop(); }, 150000);
     } catch (e) {
       setTelaffuzSonuc({ error: "Mikrofon erişimi gerekli." });
     }
