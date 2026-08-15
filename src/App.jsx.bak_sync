@@ -1158,38 +1158,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     }
   },[dilMod]);
 
-  // ------------------------------------------------------------
-  // SCROLL KONTROLÜ
-  // Kullanıcı geçmişi yukarıda okuyorsa ASLA otomatik aşağı atlama.
-  // Sadece kullanıcı zaten listenin altındaysa yeni mesaja iner.
-  // ------------------------------------------------------------
-  const mesajListeRef = useRef(null);
-  const oncekiMesajSayisiRef = useRef(msgs.length);
-
-  useEffect(() => {
-    const el = mesajListeRef.current;
-    if (!el) return;
-
-    const eskiSayisi = oncekiMesajSayisiRef.current;
-    const yeniSayisi = msgs.length;
-
-    oncekiMesajSayisiRef.current = yeniSayisi;
-
-    if (yeniSayisi <= eskiSayisi) return;
-
-    const mesafe = el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    // Kullanıcı zaten aşağıdaysa yeni mesaja git.
-    // Yukarıda okuyorsa yerinde kal.
-    if (mesafe < 180) {
-      requestAnimationFrame(() => {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: "smooth"
-        });
-      });
-    }
-  }, [msgs]);
+  useEffect(()=>{sonRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
