@@ -1993,7 +1993,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             {!telaffuzSonuc ? (
               <div style={{textAlign:"center",padding:20}}>
                 <div style={{fontSize:40,marginBottom:12}}>🎤</div>
-                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (5 saniye)</div>
+                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (150 saniye)</div>
+              </div>
+            ) : telaffuzSonuc.info ? (
+              <div style={{textAlign:"center",padding:20}}>
+                <div style={{fontSize:40,marginBottom:12}}>🎤</div>
+                <div style={{color:K.gL,fontSize:16,fontWeight:700}}>{telaffuzSonuc.info}</div>
               </div>
             ) : telaffuzSonuc.error ? (
               <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
