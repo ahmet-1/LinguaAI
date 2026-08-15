@@ -1557,7 +1557,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 30000); // 30 saniye kayıt
+      setTimeout(() => mediaRecorder.stop(), 150000); // 150 saniye kayıt
     } catch (e) {
       setTelaffuzSonuc({ error: "Mikrofon erişimi gerekli." });
     }
@@ -1830,7 +1830,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             const sonMesaj=[...msgs].reverse().find(m=>m.r==="ai");
             const testMetni=sonMesaj?sonMesaj.t.split(".")[0]:"Merhaba";
             setTelaffuzAcik(true);setTelaffuzSonuc(null);telaffuzTesti(testMetni);
-          }} style={{background:"rgba(249,168,37,0.15)",border:"none",color:K.warn,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🎯 Test</button>
+          }} style={{background:"rgba(249,168,37,0.15)",border:"none",color:K.warn,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🎯 Telaffuz Testi</button>
         <div style={{background:"rgba(0,0,0,0.25)",borderRadius:8,padding:"4px 8px",fontSize:10,color:"#aaa"}}>📷 Yakında</div>
         <button onClick={dersKapat} style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontWeight:700}}>✕ Çıkış</button>
       </div>
