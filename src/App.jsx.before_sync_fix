@@ -2994,7 +2994,7 @@ const kulGiris = u => {
                 onClick={()=>{
                   if(!kul&&!adGir){setAuthMod("kayit");setAuthAcik(true);return;}
                   if(!kul&&!adGir){setAuthMod("kayit");setAuthAcik(true);return;}
-                  if(kul&&!dersGir()){alert("⏰ 5 günlük deneme süreniz dolmuştur.\n\nDerslere devam etmek için Premium üyeliğe geçmeniz gerekmektedir.\n\n⚠️ Premium üyeliğe geçmezseniz hesabınız 1 hafta içinde silinecektir.");git("fiyat");return;}
+                  if(kul&&!dersGir()){alert("5 günlük deneme süreniz dolmuştur. Premium üyelik için lütfen bir plan seçin.");setOdePlan({id:"a",ad:"Aylık Plan",fiyat:"₺349",donem:"/ay",tutar:349});return;}
                   const k2 = adGir?{id:"admin",ad:"Admin",plan:"Sınırsız",durum:"Aktif",trialStart:0}:kul;
                   setDers({dil:dilSec.id,hoca:h,kul:k2});
                 }}>
