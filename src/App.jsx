@@ -909,6 +909,111 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     };
   }, [uid, dilId, hoca?.id]);
 
+
+
+  // ============================================================
+  // KESİN MESAJ SCROLL SİSTEMİ
+  //
+  // - Ders açılınca son mesaja gider.
+  // - Yeni kullanıcı mesajı gelince son mesaja gider.
+  // - Hoca/AI mesajı gelince son mesaja gider.
+  // - Kullanıcı eski mesajlara bakmak için yukarı çıktıysa
+  //   onu zorla aşağı göndermez.
+  // - Kullanıcı aşağıdaysa yeni mesaj geldiğinde otomatik iner.
+  // ============================================================
+
+  const scrollSonMesaja = (davranis = "smooth") => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (sonRef.current) {
+          sonRef.current.scrollIntoView({
+            behavior: davranis,
+            block: "end"
+          });
+        }
+      });
+    });
+  };
+
+  const asagiYakinsa = () => {
+    const el = sonRef.current;
+    if (!el) return true;
+
+    const scroller =
+      el.closest('[style*="overflow-y"]') ||
+      el.parentElement;
+
+    if (!scroller) return true;
+
+    const mesafe =
+      scroller.scrollHeight -
+      scroller.scrollTop -
+      scroller.clientHeight;
+
+    return mesafe < 250;
+  };
+
+  const ilkAcilisRef = useRef(true);
+
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
+
+    // Ders ilk açıldığında kesin olarak son mesaja git.
+    if (ilkAcilisRef.current) {
+      ilkAcilisRef.current = false;
+
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 100);
+
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 400);
+
+      return;
+    }
+
+    // Kullanıcı zaten aşağıdaysa yeni mesaja otomatik git.
+    if (asagiYakinsa()) {
+      setTimeout(() => {
+        scrollSonMesaja("smooth");
+      }, 50);
+    }
+  }, [msgs.length]);
+
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
+
+    const son = msgs[msgs.length - 1];
+
+    if (!son) return;
+
+    setTimeout(() => {
+      const el = sonRef.current;
+
+      if (!el) return;
+
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
+
+      if (!scroller) {
+        scrollSonMesaja("smooth");
+        return;
+      }
+
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
+
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
+      }
+    }, 100);
+  }, [msgs.length]);
+
   // ============================================================
   // CANLI SENKRON
   // Her 2 saniyede Supabase'den SON DURUM alınır.
