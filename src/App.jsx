@@ -826,7 +826,70 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       const kayit = localStorage.getItem(DERS_KEY);
       return kayit ? JSON.parse(kayit) : [];
     } catch { return []; }
-  });
+  }
+
+  // ============================================================
+  // SADECE SOHBET SCROLL SİSTEMİ
+  // ============================================================
+
+  const dersScrollRef = useRef(null);
+  const sohbetAsagidaRef = useRef(true);
+  const ilkMesajYuklemeRef = useRef(true);
+  const oncekiMesajSayisiRef = useRef(msgs.length);
+
+  const sohbetAsagiGit = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
+
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const sohbetScroll = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
+
+    const kalan =
+      el.scrollHeight -
+      el.scrollTop -
+      el.clientHeight;
+
+    sohbetAsagidaRef.current = kalan <= 120;
+  };
+
+  // Ders açılışında mevcut mesajların en altına git.
+  useEffect(() => {
+    if (!msgs.length) return;
+
+    const timers = [0, 50, 150, 300].map(ms =>
+      setTimeout(() => {
+        sohbetAsagiGit();
+      }, ms)
+    );
+
+    ilkMesajYuklemeRef.current = false;
+    oncekiMesajSayisiRef.current = msgs.length;
+
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Yeni mesaj geldiğinde kullanıcı zaten aşağıdaysa
+  // otomatik olarak yeni mesajı göster.
+  useEffect(() => {
+    const eskiSayi = oncekiMesajSayisiRef.current;
+    const yeniSayi = msgs.length;
+
+    oncekiMesajSayisiRef.current = yeniSayi;
+
+    if (yeniSayi <= eskiSayi) return;
+    if (ilkMesajYuklemeRef.current) return;
+    if (!sohbetAsagidaRef.current) return;
+
+    requestAnimationFrame(() => {
+      sohbetAsagiGit();
+    });
+  }, [msgs.length]);
+
+);
 
   // ============================================================
   // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
@@ -2054,7 +2117,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}} ref={dersScrollRef} onScroll={sohbetScroll}>
             {msgs.map((m,i)=>(
               <div key={i} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
                 {m.r==="ai"&&<Av h={hoca} dil={dil} sz={32}/>}
