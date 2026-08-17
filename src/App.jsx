@@ -792,6 +792,31 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
+
+  // Ders dili modu
+  const [dilMod, setDilMod] = useState(
+    () => sessionStorage.getItem("dilMod") || ""
+  );
+
+  // Ders seviyesi
+  const [seviye, setSeviye] = useState(
+    () => sessionStorage.getItem("seviye") || "A1"
+  );
+
+  // Ders kategorisi
+  const [kategori, setKategori] = useState("");
+
+  // Ders başlangıç zamanı
+  const baslangic = useRef(Date.now());
+
+  // Mesaj yükleme durumu
+  const [yukl, setYukl] = useState(false);
+
+  // Yazı kutusu
+  const [yazi, setYazi] = useState("");
+
+  // Sınav ekranı
+  const [sinavEkrani, setSinavEkrani] = useState(null);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
