@@ -937,146 +937,460 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
 
   // ============================================================
-  // KESİN MESAJ KUTUSU SCROLL SİSTEMİ
-  // ============================================================
+  // KESİN MESAJ SCROLL SİSTEMİ
   //
-  // Mesaj kutusunun KENDİ scrollTop değerini yönetir.
-  //
-  // 1. Ders açılınca en son mesaja gider.
-  // 2. Kullanıcı mesaj gönderince en alta gider.
-  // 3. AI/hoca cevabı gelince en alta gider.
-  // 4. Diğer cihazdan yeni mesaj gelirse ve kullanıcı aşağıdaysa
-  //    otomatik olarak en alta gider.
-  // 5. Kullanıcı eski mesajları görmek için yukarı çıktıysa
-  //    otomatik olarak aşağı atılmaz.
-  // 6. Kullanıcı tekrar aşağıya geldiyse yeni mesajlarda takip
-  //    yeniden aktif olur.
-  //
+  // - Ders açılınca son mesaja gider.
+  // - Yeni kullanıcı mesajı gelince son mesaja gider.
+  // - Hoca/AI mesajı gelince son mesaja gider.
+  // - Kullanıcı eski mesajlara bakmak için yukarı çıktıysa
+  //   onu zorla aşağı göndermez.
+  // - Kullanıcı aşağıdaysa yeni mesaj geldiğinde otomatik iner.
   // ============================================================
 
-  const dersScrollRef = useRef(null);
-
-  const scrollEnAlta = (davranis = "smooth") => {
+  const scrollSonMesaja = (davranis = "smooth") => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const el = dersScrollRef.current;
-
-        if (!el) return;
-
-        if (davranis === "auto") {
-          el.scrollTop = el.scrollHeight;
-        } else {
-          el.scrollTo({
-            top: el.scrollHeight,
-            behavior: davranis
+        if (sonRef.current) {
+          sonRef.current.scrollIntoView({
+            behavior: davranis,
+            block: "end"
           });
         }
       });
     });
   };
 
-  const scrollMesafesi = () => {
-    const el = dersScrollRef.current;
+  const asagiYakinsa = () => {
+    const el = sonRef.current;
+    if (!el) return true;
 
-    if (!el) return 0;
+    const scroller =
+      el.closest('[style*="overflow-y"]') ||
+      el.parentElement;
 
-    return (
-      el.scrollHeight -
-      el.scrollTop -
-      el.clientHeight
-    );
+    if (!scroller) return true;
+
+    const mesafe =
+      scroller.scrollHeight -
+      scroller.scrollTop -
+      scroller.clientHeight;
+
+    return mesafe < 250;
   };
 
-  const kullaniciAsagidaMi = () => {
-    return scrollMesafesi() <= 180;
-  };
-
-  const kullaniciYukariRef = useRef(false);
-  const ilkDersAcilisiRef = useRef(true);
-  const oncekiMesajSayisiRef = useRef(0);
-
-  const dersScrollTakip = () => {
-    const el = dersScrollRef.current;
-
-    if (!el) return;
-
-    const mesafe = scrollMesafesi();
-
-    if (mesafe <= 180) {
-      kullaniciYukariRef.current = false;
-    } else {
-      kullaniciYukariRef.current = true;
-    }
-  };
-
-  // ------------------------------------------------------------
-  // DERS İLK AÇILIŞI
-  // ------------------------------------------------------------
+  const ilkAcilisRef = useRef(true);
 
   useEffect(() => {
     if (!msgs || msgs.length === 0) return;
 
-    if (ilkDersAcilisiRef.current) {
-      ilkDersAcilisiRef.current = false;
+    // Ders ilk açıldığında kesin olarak son mesaja git.
+    if (ilkAcilisRef.current) {
+      ilkAcilisRef.current = false;
 
       setTimeout(() => {
-        scrollEnAlta("auto");
-      }, 50);
+        scrollSonMesaja("auto");
+      }, 100);
 
       setTimeout(() => {
-        scrollEnAlta("auto");
-      }, 250);
+        scrollSonMesaja("auto");
+      }, 400);
 
-      setTimeout(() => {
-        scrollEnAlta("auto");
-      }, 600);
-
-      oncekiMesajSayisiRef.current = msgs.length;
       return;
     }
 
-    const eskiSayi = oncekiMesajSayisiRef.current;
-    const yeniSayi = msgs.length;
-
-    oncekiMesajSayisiRef.current = yeniSayi;
-
-    // Yeni mesaj yoksa hiçbir şey yapma.
-    if (yeniSayi <= eskiSayi) return;
-
-    // Kullanıcı eski mesajları okumak için yukarı çıkmışsa
-    // onu zorla aşağı gönderme.
-    if (kullaniciYukariRef.current) return;
-
-    // Yeni mesaj geldi ve kullanıcı aşağıdaysa:
-    setTimeout(() => {
-      scrollEnAlta("smooth");
-    }, 50);
-
-    setTimeout(() => {
-      scrollEnAlta("smooth");
-    }, 250);
-
+    // Kullanıcı zaten aşağıdaysa yeni mesaja otomatik git.
+    if (asagiYakinsa()) {
+      setTimeout(() => {
+        scrollSonMesaja("smooth");
+      }, 50);
+    }
   }, [msgs.length]);
 
-  // ------------------------------------------------------------
-  // YENİ MESAJ GÖNDERİLDİĞİNDE KESİN OLARAK EN ALT
-  // ------------------------------------------------------------
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
 
-  const zorlaSonMesajaGit = () => {
-    kullaniciYukariRef.current = false;
+    const son = msgs[msgs.length - 1];
 
-    setTimeout(() => {
-      scrollEnAlta("smooth");
-    }, 20);
+    if (!son) return;
 
     setTimeout(() => {
-      scrollEnAlta("smooth");
-    }, 150);
+      const el = sonRef.current;
 
-    setTimeout(() => {
-      scrollEnAlta("smooth");
-    }, 400);
+      if (!el) return;
+
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
+
+      if (!scroller) {
+        scrollSonMesaja("smooth");
+        return;
+      }
+
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
+
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
+      }
+    }, 100);
+  }, [msgs.length]);
+
+  // ============================================================
+  // CANLI SENKRON
+  // Her 2 saniyede Supabase'den SON DURUM alınır.
+  // Gelen liste yereldekinin üzerine körlemesine yazılmaz.
+  // ID üzerinden birleştirilir.
+  // ============================================================
+
+  useEffect(() => {
+    if (!uid || !dilId || !hoca?.id) return;
+
+    let aktif = true;
+    let calisiyor = false;
+
+    const senkronizeEt = async () => {
+      if (calisiyor) return;
+
+      calisiyor = true;
+
+      try {
+        const dbMsgs = await loadMsgsFromDB(
+          uid,
+          dilId,
+          hoca.id
+        );
+
+        if (!aktif || !Array.isArray(dbMsgs)) return;
+
+        setMsgs(mevcut => {
+          const birlesik = mesajlariBirleştir(
+            mevcut,
+            dbMsgs
+          );
+
+          if (DERS_KEY) {
+            try {
+              localStorage.setItem(
+                DERS_KEY,
+                JSON.stringify(birlesik)
+              );
+            } catch {}
+          }
+
+          return birlesik;
+        });
+      } finally {
+        calisiyor = false;
+      }
+    };
+
+    const interval = setInterval(
+      senkronizeEt,
+      2000
+    );
+
+    return () => {
+      aktif = false;
+      clearInterval(interval);
+    };
+  }, [uid, dilId, hoca?.id, DERS_KEY]);
+
+  // ============================================================
+  // MESAJ KAYDET
+  //
+  // Bu fonksiyon artık verilen listeyi mevcut listenin yerine
+  // koymaz.
+  //
+  // Sadece yeni ID'leri ekler.
+  // Böylece telefon eski listeyle kayıt gönderip PC'deki yeni
+  // mesajları EZEMEZ.
+  // ============================================================
+
+  const msgKaydet = (yeniMsgs) => {
+    const gelen = (yeniMsgs || [])
+      .filter(msg => msg && msg.t)
+      .map(mesajNormalize);
+
+    if (gelen.length === 0) return;
+
+    setMsgs(mevcut => {
+      const mevcutIds = new Set(
+        mevcut.map(m => String(m.id))
+      );
+
+      const yeni = gelen.filter(
+        m => !mevcutIds.has(String(m.id))
+      );
+
+      const birlesik = mesajlariBirleştir(
+        mevcut,
+        gelen
+      );
+
+      if (DERS_KEY) {
+        try {
+          localStorage.setItem(
+            DERS_KEY,
+            JSON.stringify(birlesik)
+          );
+        } catch {}
+      }
+
+      if (
+        uid &&
+        dilId &&
+        hoca?.id &&
+        yeni.length > 0
+      ) {
+        saveMsgsToDB(
+          uid,
+          dilId,
+          hoca.id,
+          yeni
+        );
+      }
+
+      return birlesik;
+    });
   };
+
+  const [yazi, setYazi] = useState("");
+  const [yukl, setYukl] = useState(false);
+  const [mikr, setMikr] = useState(false);
+  const [telaffuzSonuc, setTelaffuzSonuc] = useState(null);
+  const [telaffuzAcik, setTelaffuzAcik] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [mikErr, setMikErr] = useState("");
+  const [sure, setSure] = useState(kul?.plan==="Deneme"?1200:0);
+  const [dilMod, setDilMod] = useState(null);
+  useEffect(()=>{
+    if(dilMod) sessionStorage.setItem("dilMod",dilMod);
+  },[dilMod]);
+  const [sesliMod, setSesliMod] = useState(false);
+  const [sinavEkrani, setSinavEkrani] = useState(null); // null | "mid" | "final"
+  const [sinavSonuc, setSinavSonuc] = useState(null); // true=sesli, false=yazılı
+  const SEVIYE_ACIKLAMA = {
+    A1: "Başlangıç — Sıfırdan başlıyorum",
+    A2: "Temel — Basit cümleler kurabiliyorum",
+    B1: "Orta Alt — Günlük konuşabilirim",
+    B2: "Orta Üst — Akıcı konuşabiliyorum",
+    C1: "İleri — Neredeyse ana dil gibi",
+    C2: "Uzman — Ana dil seviyesi"
+  };
+
+  const [seviye, setSeviye] = useState(() => {
+    if (!kul?.id) return "A1";
+    const sv = getSV(kul.id, dilId);
+    return sv || "A1";
+  });
+  const [kategori, setKategori] = useState("Genel");
+  const sonRef = useRef(null);
+  const recRef = useRef(null);
+  const konusmaRef = useRef(false);
+  const sesliModRef = useRef(false);
+  const baslangic = useRef(Date.now());
+
+  useEffect(() => {
+    if (kul?.plan==="Deneme") {
+      const ti = setInterval(()=>setSure(s=>{if(s<=1){clearInterval(ti);return 0;}return s-1;}),1000);
+      return ()=>clearInterval(ti);
+    }
+  },[]);
+
+  useEffect(() => {
+    if (!dilMod) return;
+    const ad = kul?.ad?.split(" ")[0]||"";
+    const besmele = BESMELE_DILLER.includes(dilId) ? BESMELE_METNI : "";
+    // Önceki ders geçmişini al
+    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
+    const devamMesaj = sonDers 
+      ? "Son dersimizde "+sonDers.kategori+" konusunu işlemiştik. Kaldığımız yerden devam edelim.\n\n"
+      : "Bu seninle ilk dersimiz. "+seviye+" seviyesinden başlayacağız.\n\n";
+
+    const dersPlani = seviye==="A1" 
+      ? "Bugün temel "+dil.ad+" konularını öğreneceğiz: selamlaşma, kendini tanıtma ve temel kelimeler."
+      : seviye==="A2"
+      ? "Bugün günlük konuşma kalıpları ve basit cümleler üzerinde çalışacağız."
+      : seviye==="B1"
+      ? "Bugün orta seviye konuşma pratiği ve gramer konularını işleyeceğiz."
+      : seviye==="B2"
+      ? "Bugün ileri konuşma ve yazma becerilerini geliştireceğiz."
+      : "Bugün ileri düzey "+dil.ad+" pratiği yapacağız.";
+
+    const seviyeAcik = {A1:"Başlangıç",A2:"Temel",B1:"Orta Alt",B2:"Orta Üst",C1:"İleri",C2:"Uzman"};
+    const ilkDersMi = oncekiDersler.length === 0;
+    
+    let karsilamaTxt;
+    // PLACEMENT TEST - dile göre başlangıç seviye sorusu
+    // Seviyeye göre placement test soruları
+    const seviyeSorulari = {
+      A1: "Hiç bilgin var mı? Alfabeyi biliyor musun? Daha önce öğrendin mi?",
+      A2: "Basit cümleler kurabilir misin? Kendini tanıtabilir misin?",
+      B1: "Günlük konuşma yapabiliyor musun? Gramer temellerini biliyor musun?",
+      B2: "Akıcı konuşabiliyor musun? Karmaşık konuları anlayabiliyor musun?",
+      C1: "İleri düzey metinleri anlayabiliyor musun? Akademik dil kullanabiliyor musun?",
+      C2: "Ana dil seviyesinde mi? Edebi metinleri anlayabiliyor musun?"
+    };
+    const seviyeKontrol = "\n\n"+seviye+" seviyesini seçtin. Seni doğru yerden başlatmak için: "+seviyeSorulari[seviye];
+
+    const diniBaslangic = (dilId==="medrese"||dilId==="quran") ? 
+      "\n\n📋 Seni doğru seviyeden başlatmak için birkaç kısa soru:\n"+
+      "1️⃣ Arap harflerini (Elif-Ba) tanıyor musun?\n"+
+      "2️⃣ Hareke biliyor musun?\n"+
+      "3️⃣ Kur'an okuyabiliyor musun?\n"+
+      "4️⃣ Tecvid biliyor musun?\n\n"+
+      seviyeKontrol+
+      "\n\nKısaca cevapla, sana göre başlangıç noktasını belirleyeceğim." :
+      dilId==="arabic" ?
+      "\n\n📋 Birkaç kısa soru:\n1️⃣ Arap harflerini tanıyor musun?\n2️⃣ Okuyabiliyor musun?\n3️⃣ Konuşabiliyor musun?\n"+seviyeKontrol+"\n\nCevabına göre başlayalım." :
+      (dilId==="japanese"||dilId==="korean"||dilId==="russian") ?
+      "\n\n📋 Birkaç kısa soru:\n1️⃣ "+dil.ad+" alfabesini biliyor musun?\n2️⃣ Okuyabiliyor musun?\n3️⃣ Daha önce öğrendin mi?\n"+seviyeKontrol+"\n\nCevabına göre başlayalım." :
+      "\n\n📋 Birkaç kısa soru:\n1️⃣ "+dil.ad+"'yi daha önce öğrendin mi?\n2️⃣ Okuyabiliyor musun?\n3️⃣ Konuşabiliyor musun?\n"+seviyeKontrol+
+      (seviye==="A1"||seviye==="A2" ? "\n\n"+dil.ad+" dilinde kendini tanıtmayı dener misin?" : "\n\nCevabına göre başlayalım.");
+
+    if (ilkDersMi) {
+      karsilamaTxt = besmele +
+        "Merhaba "+ad+"! Ben "+hoca.ad+", "+hoca.uz+" uzmanıyım. 👋\n\n"+
+        "Seninle ilk dersimiz! "+seviye+" ("+seviyeAcik[seviye]+") seviyesini seçmişsin."+
+        diniBaslangic+
+        "\n\n💡 "+dil.ad+" dersine hoş geldin! 🎓";
+    } else {
+      karsilamaTxt = besmele +
+        "Tekrar hoş geldin "+ad+"! Ben "+hoca.ad+". 😊\n\n"+
+        "Son dersimizde: "+sonDers.kategori+" konusunu "+sonDers.seviye+" seviyesinde işlemiştik.\n\n"+
+        "📚 Bugün kaldığımız yerden devam ediyoruz:\n"+
+        getMufredat(dilId, seviye)+"\n\n"+
+        "Hazır mısın? Başlayalım!\n\n💡 İpucu: 🎤 butona bas sesli konuş, ya da klavyeyle yaz.";
+    }
+    const txt = karsilamaTxt;
+    const uid2 = kul?.id ? String(kul.id) : "admin";
+    loadMsgsFromDB(uid2, dilId, hoca.id).then(dbMsgs => {
+      if (dbMsgs && dbMsgs.length > 0) {
+        msgKaydet(dbMsgs);
+      } else {
+        msgKaydet([{r:"ai",t:txt}]);
+      }
+    }).catch(() => { msgKaydet([{r:"ai",t:txt}]); });
+    // Besmele - sesli modda oku (sesli/yazılı her ikisinde de yaz, ama sadece sesli modda çal)
+    if (BESMELE_DILLER.includes(dilId)) {
+      if(sesliMod) {
+        setTimeout(async ()=>{
+          const tamBesmele = "Bismillahirrahmanirrahim. Rabbi yessir vela tuassir, rabbi temmim bil hayr.";
+          await sesliOku(tamBesmele, hoca.id, "ar-SA");
+        },800);
+      }
+    }
+  },[dilMod]);
+
+  // ------------------------------------------------------------
+  // SCROLL KONTROLÜ
+  // Kullanıcı geçmişi yukarıda okuyorsa ASLA otomatik aşağı atlama.
+  // Sadece kullanıcı zaten listenin altındaysa yeni mesaja iner.
+  // ------------------------------------------------------------
+  const mesajListeRef = useRef(null);
+  const oncekiMesajSayisiRef = useRef(msgs.length);
+
+  useEffect(() => {
+    const el = mesajListeRef.current;
+    if (!el) return;
+
+    const eskiSayisi = oncekiMesajSayisiRef.current;
+    const yeniSayisi = msgs.length;
+
+    oncekiMesajSayisiRef.current = yeniSayisi;
+
+    if (yeniSayisi <= eskiSayisi) return;
+
+    const mesafe = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    // Kullanıcı zaten aşağıdaysa yeni mesaja git.
+    // Yukarıda okuyorsa yerinde kal.
+    if (mesafe < 180) {
+      requestAnimationFrame(() => {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth"
+        });
+      });
+    }
+  }, [msgs]);
+
+  const getPrompt = () => {
+    const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
+    const oncekiDersler = kul?.id ? getDG(String(kul.id), dilId) : [];
+    const sonDers = oncekiDersler.length > 0 ? oncekiDersler[oncekiDersler.length-1] : null;
+
+    const buSeviyeMufredat = getMufredat(dilId, seviye);
+    const gecmisOzet = sonDers ? "Son ders: "+sonDers.tarih+", konu: "+sonDers.kategori+", seviye: "+sonDers.seviye+"." : "İlk ders.";
+
+    // DİL KURALI - KESİN
+    let dilKurali = "";
+    if (dilMod === "tr") {
+      dilKurali = "ZORUNLU KURAL: SADECE TÜRKÇE YAZ. Tek bir İngilizce, Rusça, Japonca veya başka dil kelimesi YASAK. Doğru ve doğal Türkçe kullan: 'Hoş geldin/Hoş geldiniz' karşılığı 'Hoş bulduk/Hoş buldum'dur (asla 'hoş geldin' deme cevap olarak). Sure isimlerini doğru yaz: İhlas (İklas değil), Fatiha, Felak, Nas, Kevser, Asr. Akıcı, doğal, samimi Türkçe konuş, çeviri gibi durmasın.";
+    } else if (dilMod === "hedef") {
+      dilKurali = "ZORUNLU KURAL: SADECE "+dil.ad+" dilinde yaz. Türkçe dahil BAŞKA DİL YASAK. Tek kelime bile karıştırma.";
+    } else {
+      dilKurali = "KURAL: Açıklamaları Türkçe yap, "+dil.ad+" örnekler ver. Cümle içinde dil karıştırma YASAK. Türkçe cümle içine "+dil.ad+" kelime SERPIŞTIRME.";
+    }
+
+    // ÇOCUK TARZI
+    const cocukTarz = hoca.c ?
+      "SEN ÇOK SEVİMLİ BİR ÇOCUK ÖĞRETMENİSİN! Resmi, ciddi, ağır bir dil KESİNLİKLE kullanma. Tıpkı çocuklarla oynayan eğlenceli bir abla/abi gibi konuş. Çok basit, kısa, neşeli cümleler kur. 'Hadi bakalım!', 'Süpersin!', 'Çok iyi gidiyorsun!' gibi teşvik et. Oyun ve hikaye gibi anlat, asla yetişkin gibi resmi konuşma. 5-10 yaş çocuğuyla konuşur gibi konuş." : 
+      "Yetişkin bir öğrenciyle konuşuyorsun, profesyonel ama sıcak bir dil kullan.";
+
+    // Öğrenci mesaj sayısına göre hafıza
+    const kulMesajSayisi = msgs.filter(m=>m.r==="user").length;
+    const hafizaKurali = kulMesajSayisi === 0 
+      ? "Bu öğrenciyle ilk derssin, seviyesini test et."
+      : kulMesajSayisi < 10
+      ? "Bu öğrenciyle "+kulMesajSayisi+" mesajlaştın, seviyesini ölçmeye devam et."
+      : "Bu öğrenciyi tanıyorsun, "+kulMesajSayisi+" mesajlık geçmişin var. Kişiliğine ve seviyesine göre davran.";
+
+    // OKUL MANTIĞI - MÜFREDAT TAKİBİ
+    const okulMantigi = "Sen "+hoca.ad+" adlı uzman bir AI dil öğretmenisin. "+hoca.yer+" kökenlisin. Uzmanlık: "+hoca.uz+".\n"+
+      "Öğrenci: "+ad+". Seviye: "+seviye+". Konu: "+getMufredat(dilId, seviye)+"\n"+
+      hafizaKurali+"\n"+
+      gecmisOzet+" Kaldığı yerden devam et.\n"+
+      "SEVİYE TESPİTİ: Öğrenci seçtiği seviyeden düşükse (basit hatalar, temel eksiklik) nazikçe belirt ve bir alt seviye öner. Yüksekse üst seviyeyi öner.\n"+
+      "KISA SORU=KISA CEVAP. Uzun konu=orta uzunlukta anlatım. Gereksiz arka plan anlatma.\n"+
+      "Hataları: 'Yaklaştın, ama...' şeklinde nazikçe düzelt.\n"+
+      "Cümleleri TAM bitir. AYNI doğru bilgiyi ver. Başka uygulama önerme.";
+
+    // DİNİ DERSLER ÖZEL KURAL
+    const diniKural = (dilId==="medrese"||dilId==="quran") ?
+      "DİNİ DERS KURALLARI - KESİNLİKLE UYULMALI (İHLAL ETME):\n"+
+      "- Medrese sırası: 1.Kuran 2.Arapça 3.Fıkıh 4.Hadis 5.Tefsir 6.Akaid. Bu ASLA değişmez.\n"+
+      "- Namaz duaları ve ayetleri TAM ver, eksik verme, özetleme.\n"+
+      "- Ettehiyyatü namazda okunan duadır, Kuran suresi DEĞİLDİR.\n"+
+      "- Arapca kelimeleri dogru Arapca harflerle yaz. Kalem = قَلَم\n"+
+"- Arapca rakamlar: 0=صفر(sifr), 1=واحد(vahid), 2=اثنان(isnan), 3=ثلاثة(selase), 4=أربعة(erbea), 5=خمسة(hamse), 6=ستة(sitte), 7=سبعة(sebea), 8=ثمانية(semaniye), 9=تسعة(tisaa), 10=عشرة(asere)\n"+
+"- Japonca rakamlar: 1=一(ichi), 2=二(ni), 3=三(san), 4=四(shi), 5=五(go), 6=六(roku), 7=七(nana), 8=八(hachi), 9=九(ku), 10=十(juu)\n"+
+"- Korece rakamlar: 1=일(il), 2=이(i), 3=삼(sam), 4=사(sa), 5=오(o), 6=육(yuk), 7=칠(chil), 8=팔(pal), 9=구(gu), 10=십(sip)\n"+
+
+      "- Dua ve ayetleri TAM yaz, yarım bırakma. Rabbu yessir duasının tamamı: رَبِّ يَسِّرْ وَلَا تُعَسِّرْ، رَبِّ تَمِّمْ بِالْخَيْرِ\n"+
+      "- Emin olmadığın bilgiyi KESINLIKLE üretme. Yanlis bilgi vermek haramdır.\n"+
+      "- Kuran ayet numaraları söylerken SADECE emin olduğunu söyle, uydurma.\n"+
+      "- Var olmayan ayet, hadis uydurma. Bilmiyorsan: 'Bu konuda kesin bilgim yok, güvenilir bir kaynaktan doğrulayın' de.\n"+
+      "- Dua veya sure istenince: Arapça metin + Türkçe okunuş + Anlam + Kaynak ver.\n"+
+      "- Fıkıh konularında önce görüş birliği olan bilgiyi ver." : "";
+
+    return GLOBAL_OGRETMEN_PROMPT+"\n\n"+okulMantigi+"\n"+dilKurali+"\n"+cocukTarz+"\n"+diniKural+
+      "\nHoca: "+hoca.ad+". Uzmanlık: "+hoca.uz+". Kategori: "+kategori+"."+
+      "\n"+(sesliMod?"Öğrenci sesli konuşuyor, kısa net yanıt ver.":"Öğrenci yazıyor, yazılı yanıt ver.")+
+      "\nKESIN CEVAP UZUNLUĞU KURALI: Maksimum 4-5 cümle yaz, asla daha uzun yazma. Soruyla doğrudan ilgili olmayan hiçbir bilgi ekleme. Sadece sorulan şeyi cevapla, arka plan/tarih/gereksiz detay YASAK. Örnek: 'Patates nasıl kızartılır?' sorusuna SADECE pratik adımları ver (yıka, soy, dilimle, kızgın yağda kızart), tarımsal süreç gibi alakasız bilgi KESİNLİKLE verme. Konuyu öğretirken bile kısa ve öz ol, tek seferde 1 kavram anlat, sonra öğrenciye sor."+
+      "\nYANLIŞ DÜZELTME TARZI: Öğrenci hata yaparsa asla doğrudan 'yanlış' deme. Şöyle yumuşak düzelt: 'Yaklaştın, ama burada ... biraz farklı' gibi. Sabırlı, motive edici, nazik ol. Öğrenciyi küçümseme."+
+      "\nTELAFFUZ GERİ BİLDİRİMİ: Öğrencinin yazdığı/söylediği kelimede harf hatası varsa belirt, doğrusunu göster ve nasıl çıkarılacağını söyle (örn: bu harf gırtlaktan/boğazdan çıkar)."+
+      "\nŞİMDİ DERSE BAŞLA. "+seviye+" seviyesine göre bugünkü konuyu tanıt.\n"+
+      "DERS KURALLARI: En az 4-5 konu goster. Sadece 1-2 konu söyleyip bitirme. Yarım bırakma, ders en az 30 dakika sürsün.\n"+
+      "Her 5 mesajda mini test yap (3 soru). Ders sonunda mutlaka ödev ver.";
+  };
+
 
   const gonder = async (txt) => {
     if (!txt || !txt.trim() || yukl) return;
@@ -1157,9 +1471,6 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     // Kullanıcı mesajını TEK BAŞINA kaydet.
     // Böylece diğer cihazdaki geçmişin üzerine yazılmaz.
     msgKaydet([kullaniciMesaji]);
-
-    // Kullanıcı mesaj gönderdiği anda kesin olarak son mesaja git.
-    zorlaSonMesajaGit();
 
     try {
       // AI geçmişini o anki ekrandaki mesajlardan oluştur.
@@ -1743,18 +2054,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-          <div
-            ref={dersScrollRef}
-            onScroll={dersScrollTakip}
-            style={{
-              flex:1,
-              overflowY:"auto",
-              padding:16,
-              display:"flex",
-              flexDirection:"column",
-              gap:12
-            }}
-          >
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
             {msgs.map((m,i)=>(
               <div key={i} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
                 {m.r==="ai"&&<Av h={hoca} dil={dil} sz={32}/>}
@@ -1780,6 +2080,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                 </div>
               </div>
             )}
+            <div ref={sonRef}/>
           </div>
           <div style={{padding:12,borderTop:"1px solid "+K.bdr,background:K.bg2}}>
             <div style={{display:"flex",gap:8,alignItems:"center"}}>
