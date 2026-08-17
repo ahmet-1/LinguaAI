@@ -826,7 +826,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       const kayit = localStorage.getItem(DERS_KEY);
       return kayit ? JSON.parse(kayit) : [];
     } catch { return []; }
-  }
+  });
 
   // ============================================================
   // SADECE SOHBET SCROLL SİSTEMİ
@@ -888,8 +888,6 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       sohbetAsagiGit();
     });
   }, [msgs.length]);
-
-);
 
   // ============================================================
   // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
