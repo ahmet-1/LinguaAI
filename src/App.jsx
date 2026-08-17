@@ -857,143 +857,40 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   };
 
   // Ders açılışında mevcut mesajların en altına git.
+
+
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
   useEffect(() => {
-    if (!msgs.length) return;
+    if (!msgs || msgs.length === 0) return;
 
-    const timers = [0, 50, 150, 300].map(ms =>
-      setTimeout(() => {
-        sohbetAsagiGit();
-      }, ms)
-    );
+    const son = msgs[msgs.length - 1];
 
-    ilkMesajYuklemeRef.current = false;
-    oncekiMesajSayisiRef.current = msgs.length;
+    if (!son) return;
 
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    setTimeout(() => {
+      const el = sonRef.current;
 
-  // Yeni mesaj geldiğinde kullanıcı zaten aşağıdaysa
-  // otomatik olarak yeni mesajı göster.
-  useEffect(() => {
-    const eskiSayi = oncekiMesajSayisiRef.current;
-    const yeniSayi = msgs.length;
+      if (!el) return;
 
-    oncekiMesajSayisiRef.current = yeniSayi;
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
 
-    if (yeniSayi <= eskiSayi) return;
-    if (ilkMesajYuklemeRef.current) return;
-    if (!sohbetAsagidaRef.current) return;
-
-    requestAnimationFrame(() => {
-      sohbetAsagiGit();
-    });
-  }, [msgs.length]);
-
-  // ============================================================
-  // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
-  //
-  // Supabase TEK GERÇEK KAYNAKTIR.
-  // localStorage sadece açılışı hızlandıran önbellektir.
-  //
-  // ÖNEMLİ:
-  // Cihazlar artık bütün sohbeti tekrar tekrar yazmaz.
-  // Sadece YENİ mesajlar Supabase'e gönderilir.
-  // Diğer cihazdan gelen mesajlar mevcut listeyle BİRLEŞTİRİLİR.
-  // ============================================================
-
-  const uid = kul?.id ? String(kul.id) : "admin";
-
-  const mesajIdOlustur = () => {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
-      return crypto.randomUUID();
-    }
-
-    return (
-      "msg_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2)
-    );
-  };
-
-  const mesajNormalize = (msg) => ({
-    id: msg?.id ? String(msg.id) : mesajIdOlustur(),
-    r: msg?.r || "",
-    t: msg?.t || "",
-    createdAt: msg?.createdAt || null
-  });
-
-  const mesajlariBirleştir = (yerel, uzak) => {
-    const map = new Map();
-
-    [...(yerel || []), ...(uzak || [])].forEach(msg => {
-      if (!msg || !msg.t) return;
-
-      const n = mesajNormalize(msg);
-
-      if (!map.has(n.id)) {
-        map.set(n.id, n);
+      if (!scroller) {
+        scrollSonMesaja("smooth");
         return;
       }
 
-      const eski = map.get(n.id);
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
 
-      if (!eski.createdAt && n.createdAt) {
-        map.set(n.id, n);
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
       }
-    });
-
-    return Array.from(map.values()).sort((a, b) => {
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
-
-      if (ta !== tb) return ta - tb;
-
-      return String(a.id).localeCompare(String(b.id));
-    });
-  };
-
-  // İlk açılış:
-  // Önce localStorage gösterilir, hemen ardından Supabase gerçek geçmişi gelir.
-  useEffect(() => {
-    if (!uid || !dilId || !hoca?.id) return;
-
-    let aktif = true;
-
-    const yukle = async () => {
-      const dbMsgs = await loadMsgsFromDB(
-        uid,
-        dilId,
-        hoca.id
-      );
-
-      if (!aktif || !Array.isArray(dbMsgs)) return;
-
-      setMsgs(mevcut => {
-        const birlesik = mesajlariBirleştir(mevcut, dbMsgs);
-
-        if (DERS_KEY) {
-          try {
-            localStorage.setItem(
-              DERS_KEY,
-              JSON.stringify(birlesik)
-            );
-          } catch {}
-        }
-
-        return birlesik;
-      });
-    };
-
-    yukle();
-
-    return () => {
-      aktif = false;
-    };
-  }, [uid, dilId, hoca?.id]);
+    }, 100);
+  }, [msgs.length]);
 
 
 
