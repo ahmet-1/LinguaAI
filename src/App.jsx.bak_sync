@@ -792,6 +792,31 @@ function AuthModal({ilkMod, kapat, basari}) {
 
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
+
+  // Ders dili modu
+  const [dilMod, setDilMod] = useState(
+    () => sessionStorage.getItem("dilMod") || ""
+  );
+
+  // Ders seviyesi
+  const [seviye, setSeviye] = useState(
+    () => sessionStorage.getItem("seviye") || "A1"
+  );
+
+  // Ders kategorisi
+  const [kategori, setKategori] = useState("");
+
+  // Ders başlangıç zamanı
+  const baslangic = useRef(Date.now());
+
+  // Mesaj yükleme durumu
+  const [yukl, setYukl] = useState(false);
+
+  // Yazı kutusu
+  const [yazi, setYazi] = useState("");
+
+  // Sınav ekranı
+  const [sinavEkrani, setSinavEkrani] = useState(null);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
@@ -802,6 +827,67 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       return kayit ? JSON.parse(kayit) : [];
     } catch { return []; }
   });
+
+  // ============================================================
+  // SADECE SOHBET SCROLL SİSTEMİ
+  // ============================================================
+
+  const dersScrollRef = useRef(null);
+  const sohbetAsagidaRef = useRef(true);
+  const ilkMesajYuklemeRef = useRef(true);
+  const oncekiMesajSayisiRef = useRef(msgs.length);
+
+  const sohbetAsagiGit = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
+
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const sohbetScroll = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
+
+    const kalan =
+      el.scrollHeight -
+      el.scrollTop -
+      el.clientHeight;
+
+    sohbetAsagidaRef.current = kalan <= 120;
+  };
+
+  // Ders açılışında mevcut mesajların en altına git.
+  useEffect(() => {
+    if (!msgs.length) return;
+
+    const timers = [0, 50, 150, 300].map(ms =>
+      setTimeout(() => {
+        sohbetAsagiGit();
+      }, ms)
+    );
+
+    ilkMesajYuklemeRef.current = false;
+    oncekiMesajSayisiRef.current = msgs.length;
+
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Yeni mesaj geldiğinde kullanıcı zaten aşağıdaysa
+  // otomatik olarak yeni mesajı göster.
+  useEffect(() => {
+    const eskiSayi = oncekiMesajSayisiRef.current;
+    const yeniSayi = msgs.length;
+
+    oncekiMesajSayisiRef.current = yeniSayi;
+
+    if (yeniSayi <= eskiSayi) return;
+    if (ilkMesajYuklemeRef.current) return;
+    if (!sohbetAsagidaRef.current) return;
+
+    requestAnimationFrame(() => {
+      sohbetAsagiGit();
+    });
+  }, [msgs.length]);
 
   // ============================================================
   // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
@@ -908,6 +994,111 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       aktif = false;
     };
   }, [uid, dilId, hoca?.id]);
+
+
+
+  // ============================================================
+  // KESİN MESAJ SCROLL SİSTEMİ
+  //
+  // - Ders açılınca son mesaja gider.
+  // - Yeni kullanıcı mesajı gelince son mesaja gider.
+  // - Hoca/AI mesajı gelince son mesaja gider.
+  // - Kullanıcı eski mesajlara bakmak için yukarı çıktıysa
+  //   onu zorla aşağı göndermez.
+  // - Kullanıcı aşağıdaysa yeni mesaj geldiğinde otomatik iner.
+  // ============================================================
+
+  const scrollSonMesaja = (davranis = "smooth") => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (sonRef.current) {
+          sonRef.current.scrollIntoView({
+            behavior: davranis,
+            block: "end"
+          });
+        }
+      });
+    });
+  };
+
+  const asagiYakinsa = () => {
+    const el = sonRef.current;
+    if (!el) return true;
+
+    const scroller =
+      el.closest('[style*="overflow-y"]') ||
+      el.parentElement;
+
+    if (!scroller) return true;
+
+    const mesafe =
+      scroller.scrollHeight -
+      scroller.scrollTop -
+      scroller.clientHeight;
+
+    return mesafe < 250;
+  };
+
+  const ilkAcilisRef = useRef(true);
+
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
+
+    // Ders ilk açıldığında kesin olarak son mesaja git.
+    if (ilkAcilisRef.current) {
+      ilkAcilisRef.current = false;
+
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 100);
+
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 400);
+
+      return;
+    }
+
+    // Kullanıcı zaten aşağıdaysa yeni mesaja otomatik git.
+    if (asagiYakinsa()) {
+      setTimeout(() => {
+        scrollSonMesaja("smooth");
+      }, 50);
+    }
+  }, [msgs.length]);
+
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
+
+    const son = msgs[msgs.length - 1];
+
+    if (!son) return;
+
+    setTimeout(() => {
+      const el = sonRef.current;
+
+      if (!el) return;
+
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
+
+      if (!scroller) {
+        scrollSonMesaja("smooth");
+        return;
+      }
+
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
+
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
+      }
+    }, 100);
+  }, [msgs.length]);
 
   // ============================================================
   // CANLI SENKRON
@@ -1158,7 +1349,38 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     }
   },[dilMod]);
 
-  useEffect(()=>{sonRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+  // ------------------------------------------------------------
+  // SCROLL KONTROLÜ
+  // Kullanıcı geçmişi yukarıda okuyorsa ASLA otomatik aşağı atlama.
+  // Sadece kullanıcı zaten listenin altındaysa yeni mesaja iner.
+  // ------------------------------------------------------------
+  const mesajListeRef = useRef(null);
+  const oncekiMesajSayisiRef = useRef(msgs.length);
+
+  useEffect(() => {
+    const el = mesajListeRef.current;
+    if (!el) return;
+
+    const eskiSayisi = oncekiMesajSayisiRef.current;
+    const yeniSayisi = msgs.length;
+
+    oncekiMesajSayisiRef.current = yeniSayisi;
+
+    if (yeniSayisi <= eskiSayisi) return;
+
+    const mesafe = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    // Kullanıcı zaten aşağıdaysa yeni mesaja git.
+    // Yukarıda okuyorsa yerinde kal.
+    if (mesafe < 180) {
+      requestAnimationFrame(() => {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth"
+        });
+      });
+    }
+  }, [msgs]);
 
   const getPrompt = () => {
     const ad = kul?.ad?.split(" ")[0] || "Öğrenci";
@@ -1526,7 +1748,14 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
       
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
-      setTimeout(() => mediaRecorder.stop(), 30000); // 30 saniye kayıt
+      let kalan = 150;
+      setTelaffuzSonuc({info:"🎤 Kayıt başladı - "+kalan+" saniye kaldı. Okumaya başlayın..."});
+      const sayac = setInterval(()=>{
+        kalan--;
+        if(kalan>0) setTelaffuzSonuc({info:"🎤 Kayıt devam ediyor... "+kalan+" saniye"});
+        else clearInterval(sayac);
+      },1000);
+      setTimeout(() => { clearInterval(sayac); mediaRecorder.stop(); }, 150000);
     } catch (e) {
       setTelaffuzSonuc({ error: "Mikrofon erişimi gerekli." });
     }
@@ -1799,7 +2028,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             const sonMesaj=[...msgs].reverse().find(m=>m.r==="ai");
             const testMetni=sonMesaj?sonMesaj.t.split(".")[0]:"Merhaba";
             setTelaffuzAcik(true);setTelaffuzSonuc(null);telaffuzTesti(testMetni);
-          }} style={{background:"rgba(249,168,37,0.15)",border:"none",color:K.warn,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🎯 Test</button>
+          }} style={{background:"rgba(249,168,37,0.15)",border:"none",color:K.warn,borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,fontWeight:700}}>🎯 Telaffuz Testi</button>
         <div style={{background:"rgba(0,0,0,0.25)",borderRadius:8,padding:"4px 8px",fontSize:10,color:"#aaa"}}>📷 Yakında</div>
         <button onClick={dersKapat} style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"8px 14px",cursor:"pointer",fontWeight:700}}>✕ Çıkış</button>
       </div>
@@ -1886,7 +2115,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}} ref={dersScrollRef} onScroll={sohbetScroll}>
             {msgs.map((m,i)=>(
               <div key={i} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
                 {m.r==="ai"&&<Av h={hoca} dil={dil} sz={32}/>}
@@ -1955,7 +2184,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             {!telaffuzSonuc ? (
               <div style={{textAlign:"center",padding:20}}>
                 <div style={{fontSize:40,marginBottom:12}}>🎤</div>
-                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (5 saniye)</div>
+                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (150 saniye)</div>
+              </div>
+            ) : telaffuzSonuc.info ? (
+              <div style={{textAlign:"center",padding:20}}>
+                <div style={{fontSize:40,marginBottom:12}}>🎤</div>
+                <div style={{color:K.gL,fontSize:16,fontWeight:700}}>{telaffuzSonuc.info}</div>
               </div>
             ) : telaffuzSonuc.error ? (
               <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
@@ -2963,7 +3197,7 @@ const kulGiris = u => {
                 onClick={()=>{
                   if(!kul&&!adGir){setAuthMod("kayit");setAuthAcik(true);return;}
                   if(!kul&&!adGir){setAuthMod("kayit");setAuthAcik(true);return;}
-                  if(kul&&!dersGir()){alert("5 günlük deneme süreniz dolmuştur. Premium üyelik için lütfen bir plan seçin.");setOdePlan({id:"a",ad:"Aylık Plan",fiyat:"₺349",donem:"/ay",tutar:349});return;}
+                  if(kul&&!dersGir()){alert("⏰ 5 günlük deneme süreniz dolmuştur.\n\nDerslere devam etmek için Premium üyeliğe geçmeniz gerekmektedir.\n\n⚠️ Premium üyeliğe geçmezseniz hesabınız 1 hafta içinde silinecektir.");git("fiyat");return;}
                   const k2 = adGir?{id:"admin",ad:"Admin",plan:"Sınırsız",durum:"Aktif",trialStart:0}:kul;
                   setDers({dil:dilSec.id,hoca:h,kul:k2});
                 }}>

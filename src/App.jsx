@@ -790,8 +790,152 @@ function AuthModal({ilkMod, kapat, basari}) {
   );
 }
 
+
+// ============================================================
+// DERS MESAJLARI - NORMALİZASYON / BİRLEŞTİRME
+// Tek amaç: PC + telefon mesajlarını aynı listeye doğru sırayla
+// koymak. Dil/hoca mantığına müdahale etmez.
+// ============================================================
+
+function mesajNormalize(m) {
+  if (!m || typeof m !== "object") return null;
+
+  const id =
+    m.id != null && String(m.id).trim()
+      ? String(m.id)
+      : (
+          m.client_id != null && String(m.client_id).trim()
+            ? String(m.client_id)
+            : (
+                m.dbId != null
+                  ? "db_" + String(m.dbId)
+                  : null
+              )
+        );
+
+  const t =
+    m.t != null
+      ? String(m.t)
+      : (
+          m.content != null
+            ? String(m.content)
+            : ""
+        );
+
+  const r =
+    m.r != null
+      ? String(m.r)
+      : (
+          m.role != null
+            ? String(m.role)
+            : ""
+        );
+
+  if (!id || !t || !r) return null;
+
+  return {
+    ...m,
+    id,
+    r,
+    t,
+    createdAt:
+      m.createdAt ||
+      m.created_at ||
+      null,
+    dbId:
+      m.dbId != null
+        ? m.dbId
+        : null
+  };
+}
+
+function mesajSirala(a, b) {
+  const ta = a?.createdAt
+    ? new Date(a.createdAt).getTime()
+    : NaN;
+
+  const tb = b?.createdAt
+    ? new Date(b.createdAt).getTime()
+    : NaN;
+
+  if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) {
+    return ta - tb;
+  }
+
+  if (Number.isFinite(ta) && !Number.isFinite(tb)) return -1;
+  if (!Number.isFinite(ta) && Number.isFinite(tb)) return 1;
+
+  const da = Number(a?.dbId);
+  const db = Number(b?.dbId);
+
+  if (Number.isFinite(da) && Number.isFinite(db) && da !== db) {
+    return da - db;
+  }
+
+  return String(a?.id || "").localeCompare(
+    String(b?.id || "")
+  );
+}
+
+function mesajlariBirleştir(mevcut, gelen) {
+  const harita = new Map();
+
+  [
+    ...(Array.isArray(mevcut) ? mevcut : []),
+    ...(Array.isArray(gelen) ? gelen : [])
+  ]
+    .map(mesajNormalize)
+    .filter(Boolean)
+    .forEach(m => {
+      const key = String(m.id);
+
+      const eski = harita.get(key);
+
+      if (!eski) {
+        harita.set(key, m);
+        return;
+      }
+
+      // Aynı mesajın DB'den gelen versiyonu daha doluysa
+      // DB bilgisini koru.
+      harita.set(key, {
+        ...eski,
+        ...m,
+        id: key
+      });
+    });
+
+  return Array.from(harita.values())
+    .sort(mesajSirala);
+}
+
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
+
+  // Ders dili modu
+  const [dilMod, setDilMod] = useState(
+    () => sessionStorage.getItem("dilMod") || ""
+  );
+
+  // Ders seviyesi
+  const [seviye, setSeviye] = useState(
+    () => sessionStorage.getItem("seviye") || "A1"
+  );
+
+  // Ders kategorisi
+  const [kategori, setKategori] = useState("");
+
+  // Ders başlangıç zamanı
+  const baslangic = useRef(Date.now());
+
+  // Mesaj yükleme durumu
+  const [yukl, setYukl] = useState(false);
+
+  // Yazı kutusu
+  const [yazi, setYazi] = useState("");
+
+  // Sınav ekranı
+  const [sinavEkrani, setSinavEkrani] = useState(null);
   // WhatsApp mantığı - önceki ders geçmişini yükle
   // WhatsApp mantığı - hoca+dil bazlı ders geçmişi yükle
   const DERS_KEY = kul?.id ? "msg_"+kul.id+"_"+dilId+"_"+hoca.id : null;
@@ -804,110 +948,173 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   });
 
   // ============================================================
-  // PC <-> MOBİL KALICI DERS SENKRONİZASYONU
-  //
-  // Supabase TEK GERÇEK KAYNAKTIR.
-  // localStorage sadece açılışı hızlandıran önbellektir.
-  //
-  // ÖNEMLİ:
-  // Cihazlar artık bütün sohbeti tekrar tekrar yazmaz.
-  // Sadece YENİ mesajlar Supabase'e gönderilir.
-  // Diğer cihazdan gelen mesajlar mevcut listeyle BİRLEŞTİRİLİR.
+  // SADECE SOHBET SCROLL SİSTEMİ
   // ============================================================
 
-  const uid = kul?.id ? String(kul.id) : "admin";
+  const dersScrollRef = useRef(null);
+  const sohbetAsagidaRef = useRef(true);
+  const ilkMesajYuklemeRef = useRef(true);
+  const oncekiMesajSayisiRef = useRef(msgs.length);
 
-  const mesajIdOlustur = () => {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
-      return crypto.randomUUID();
-    }
+  const sohbetAsagiGit = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
 
-    return (
-      "msg_" +
-      Date.now() +
-      "_" +
-      Math.random().toString(36).slice(2)
-    );
+    el.scrollTop = el.scrollHeight;
   };
 
-  const mesajNormalize = (msg) => ({
-    id: msg?.id ? String(msg.id) : mesajIdOlustur(),
-    r: msg?.r || "",
-    t: msg?.t || "",
-    createdAt: msg?.createdAt || null
-  });
+  const sohbetScroll = () => {
+    const el = dersScrollRef.current;
+    if (!el) return;
 
-  const mesajlariBirleştir = (yerel, uzak) => {
-    const map = new Map();
+    const kalan =
+      el.scrollHeight -
+      el.scrollTop -
+      el.clientHeight;
 
-    [...(yerel || []), ...(uzak || [])].forEach(msg => {
-      if (!msg || !msg.t) return;
+    sohbetAsagidaRef.current = kalan <= 120;
+  };
 
-      const n = mesajNormalize(msg);
+  // Ders açılışında mevcut mesajların en altına git.
 
-      if (!map.has(n.id)) {
-        map.set(n.id, n);
+
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
+
+    const son = msgs[msgs.length - 1];
+
+    if (!son) return;
+
+    setTimeout(() => {
+      const el = sonRef.current;
+
+      if (!el) return;
+
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
+
+      if (!scroller) {
+        scrollSonMesaja("smooth");
         return;
       }
 
-      const eski = map.get(n.id);
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
 
-      if (!eski.createdAt && n.createdAt) {
-        map.set(n.id, n);
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
       }
-    });
+    }, 100);
+  }, [msgs.length]);
 
-    return Array.from(map.values()).sort((a, b) => {
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
 
-      if (ta !== tb) return ta - tb;
 
-      return String(a.id).localeCompare(String(b.id));
+  // ============================================================
+  // KESİN MESAJ SCROLL SİSTEMİ
+  //
+  // - Ders açılınca son mesaja gider.
+  // - Yeni kullanıcı mesajı gelince son mesaja gider.
+  // - Hoca/AI mesajı gelince son mesaja gider.
+  // - Kullanıcı eski mesajlara bakmak için yukarı çıktıysa
+  //   onu zorla aşağı göndermez.
+  // - Kullanıcı aşağıdaysa yeni mesaj geldiğinde otomatik iner.
+  // ============================================================
+
+  const scrollSonMesaja = (davranis = "smooth") => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (sonRef.current) {
+          sonRef.current.scrollIntoView({
+            behavior: davranis,
+            block: "end"
+          });
+        }
+      });
     });
   };
 
-  // İlk açılış:
-  // Önce localStorage gösterilir, hemen ardından Supabase gerçek geçmişi gelir.
+  const asagiYakinsa = () => {
+    const el = sonRef.current;
+    if (!el) return true;
+
+    const scroller =
+      el.closest('[style*="overflow-y"]') ||
+      el.parentElement;
+
+    if (!scroller) return true;
+
+    const mesafe =
+      scroller.scrollHeight -
+      scroller.scrollTop -
+      scroller.clientHeight;
+
+    return mesafe < 250;
+  };
+
+  const ilkAcilisRef = useRef(true);
+
   useEffect(() => {
-    if (!uid || !dilId || !hoca?.id) return;
+    if (!msgs || msgs.length === 0) return;
 
-    let aktif = true;
+    // Ders ilk açıldığında kesin olarak son mesaja git.
+    if (ilkAcilisRef.current) {
+      ilkAcilisRef.current = false;
 
-    const yukle = async () => {
-      const dbMsgs = await loadMsgsFromDB(
-        uid,
-        dilId,
-        hoca.id
-      );
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 100);
 
-      if (!aktif || !Array.isArray(dbMsgs)) return;
+      setTimeout(() => {
+        scrollSonMesaja("auto");
+      }, 400);
 
-      setMsgs(mevcut => {
-        const birlesik = mesajlariBirleştir(mevcut, dbMsgs);
+      return;
+    }
 
-        if (DERS_KEY) {
-          try {
-            localStorage.setItem(
-              DERS_KEY,
-              JSON.stringify(birlesik)
-            );
-          } catch {}
-        }
+    // Kullanıcı zaten aşağıdaysa yeni mesaja otomatik git.
+    if (asagiYakinsa()) {
+      setTimeout(() => {
+        scrollSonMesaja("smooth");
+      }, 50);
+    }
+  }, [msgs.length]);
 
-        return birlesik;
-      });
-    };
+  // Yeni mesaj gönderildiğinde kesin olarak aşağı git.
+  useEffect(() => {
+    if (!msgs || msgs.length === 0) return;
 
-    yukle();
+    const son = msgs[msgs.length - 1];
 
-    return () => {
-      aktif = false;
-    };
-  }, [uid, dilId, hoca?.id]);
+    if (!son) return;
+
+    setTimeout(() => {
+      const el = sonRef.current;
+
+      if (!el) return;
+
+      const scroller =
+        el.closest('[style*="overflow-y"]') ||
+        el.parentElement;
+
+      if (!scroller) {
+        scrollSonMesaja("smooth");
+        return;
+      }
+
+      const mesafe =
+        scroller.scrollHeight -
+        scroller.scrollTop -
+        scroller.clientHeight;
+
+      if (mesafe < 500) {
+        scrollSonMesaja("smooth");
+      }
+    }, 100);
+  }, [msgs.length]);
 
   // ============================================================
   // CANLI SENKRON
@@ -1924,7 +2131,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}} ref={dersScrollRef} onScroll={sohbetScroll}>
             {msgs.map((m,i)=>(
               <div key={i} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
                 {m.r==="ai"&&<Av h={hoca} dil={dil} sz={32}/>}
