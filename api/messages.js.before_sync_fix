@@ -25,23 +25,6 @@ export default async function handler(req, res) {
   };
 
   try {
-    /*
-     * ============================================================
-     * GET
-     * ============================================================
-     *
-     * Supabase'deki bütün mesajlar alınır.
-     *
-     * Sıralama:
-     *   created_at ASC
-     *   id ASC
-     *
-     * Böylece aynı milisaniyede oluşan mesajlarda bile sıra
-     * deterministik kalır.
-     *
-     * created_at MUTLAKA istemciye gönderilir.
-     */
-
     if (req.method === "GET") {
       const {
         userId,
@@ -66,7 +49,7 @@ export default async function handler(req, res) {
         "&hoca_id=eq." +
         encodeURIComponent(String(hocaId)) +
         "&select=id,client_id,role,content,created_at" +
-        "&order=created_at.asc,id.asc" +
+        "&order=id.asc" +
         "&limit=5000";
 
       const response = await fetch(url, {
@@ -86,10 +69,11 @@ export default async function handler(req, res) {
       const data = await response.json();
 
       const sonuc = (data || [])
-        .filter(message =>
-          message &&
-          typeof message.role === "string" &&
-          typeof message.content === "string"
+        .filter(
+          message =>
+            message &&
+            typeof message.role === "string" &&
+            typeof message.content === "string"
         )
         .map(message => ({
           id:
@@ -101,24 +85,17 @@ export default async function handler(req, res) {
           r: message.role,
           t: message.content,
 
-          createdAt:
-            message.created_at || null
+          // KRİTİK:
+          // Supabase zaman bilgisini frontend'e gönderiyoruz.
+          createdAt: message.created_at || null,
+
+          // DB sırasını da koruyoruz.
+          dbId: message.id
         }));
 
       res.status(200).json(sonuc);
       return;
     }
-
-    /*
-     * ============================================================
-     * POST
-     * ============================================================
-     *
-     * Sadece yeni mesajlar gönderilir.
-     *
-     * client_id benzersiz olduğu için aynı mesaj ikinci kez
-     * kaydedilmez.
-     */
 
     if (req.method === "POST") {
       const {
@@ -142,14 +119,15 @@ export default async function handler(req, res) {
         return;
       }
 
-      const temizMesajlar = messages.filter(message =>
-        message &&
-        typeof message.id === "string" &&
-        message.id.trim() !== "" &&
-        typeof message.r === "string" &&
-        message.r.trim() !== "" &&
-        typeof message.t === "string" &&
-        message.t.trim() !== ""
+      const temizMesajlar = messages.filter(
+        message =>
+          message &&
+          typeof message.id === "string" &&
+          message.id.trim() !== "" &&
+          typeof message.r === "string" &&
+          message.r.trim() !== "" &&
+          typeof message.t === "string" &&
+          message.t.trim() !== ""
       );
 
       if (temizMesajlar.length === 0) {
@@ -164,21 +142,9 @@ export default async function handler(req, res) {
         user_id: String(userId),
         dil_id: String(dilId),
         hoca_id: String(hocaId),
-
         client_id: String(message.id),
-
         role: String(message.r),
-        content: String(message.t),
-
-        /*
-         * İstemcide oluşturulmuş createdAt varsa onu koru.
-         * Yoksa Supabase kendi default timestamp değerini üretir.
-         */
-        ...(message.createdAt
-          ? {
-              created_at: String(message.createdAt)
-            }
-          : {})
+        content: String(message.t)
       }));
 
       const response = await fetch(
@@ -190,7 +156,6 @@ export default async function handler(req, res) {
 
           headers: {
             ...headers,
-
             Prefer:
               "resolution=ignore-duplicates,return=minimal"
           },

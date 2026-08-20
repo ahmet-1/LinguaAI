@@ -790,6 +790,125 @@ function AuthModal({ilkMod, kapat, basari}) {
   );
 }
 
+
+// ============================================================
+// DERS MESAJLARI - NORMALİZASYON / BİRLEŞTİRME
+// Tek amaç: PC + telefon mesajlarını aynı listeye doğru sırayla
+// koymak. Dil/hoca mantığına müdahale etmez.
+// ============================================================
+
+function mesajNormalize(m) {
+  if (!m || typeof m !== "object") return null;
+
+  const id =
+    m.id != null && String(m.id).trim()
+      ? String(m.id)
+      : (
+          m.client_id != null && String(m.client_id).trim()
+            ? String(m.client_id)
+            : (
+                m.dbId != null
+                  ? "db_" + String(m.dbId)
+                  : null
+              )
+        );
+
+  const t =
+    m.t != null
+      ? String(m.t)
+      : (
+          m.content != null
+            ? String(m.content)
+            : ""
+        );
+
+  const r =
+    m.r != null
+      ? String(m.r)
+      : (
+          m.role != null
+            ? String(m.role)
+            : ""
+        );
+
+  if (!id || !t || !r) return null;
+
+  return {
+    ...m,
+    id,
+    r,
+    t,
+    createdAt:
+      m.createdAt ||
+      m.created_at ||
+      null,
+    dbId:
+      m.dbId != null
+        ? m.dbId
+        : null
+  };
+}
+
+function mesajSirala(a, b) {
+  const ta = a?.createdAt
+    ? new Date(a.createdAt).getTime()
+    : NaN;
+
+  const tb = b?.createdAt
+    ? new Date(b.createdAt).getTime()
+    : NaN;
+
+  if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) {
+    return ta - tb;
+  }
+
+  if (Number.isFinite(ta) && !Number.isFinite(tb)) return -1;
+  if (!Number.isFinite(ta) && Number.isFinite(tb)) return 1;
+
+  const da = Number(a?.dbId);
+  const db = Number(b?.dbId);
+
+  if (Number.isFinite(da) && Number.isFinite(db) && da !== db) {
+    return da - db;
+  }
+
+  return String(a?.id || "").localeCompare(
+    String(b?.id || "")
+  );
+}
+
+function mesajlariBirleştir(mevcut, gelen) {
+  const harita = new Map();
+
+  [
+    ...(Array.isArray(mevcut) ? mevcut : []),
+    ...(Array.isArray(gelen) ? gelen : [])
+  ]
+    .map(mesajNormalize)
+    .filter(Boolean)
+    .forEach(m => {
+      const key = String(m.id);
+
+      const eski = harita.get(key);
+
+      if (!eski) {
+        harita.set(key, m);
+        return;
+      }
+
+      // Aynı mesajın DB'den gelen versiyonu daha doluysa
+      // DB bilgisini koru.
+      harita.set(key, {
+        ...eski,
+        ...m,
+        id: key
+      });
+    });
+
+  return Array.from(harita.values())
+    .sort(mesajSirala);
+}
+
 function DersEkrani({dilId, hoca, kul, kapat}) {
   const dil = DILLER.find(d=>d.id===dilId);
 
