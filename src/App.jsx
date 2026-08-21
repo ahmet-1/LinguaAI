@@ -837,7 +837,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     id: msg?.id ? String(msg.id) : mesajIdOlustur(),
     r: msg?.r || "",
     t: msg?.t || "",
-    createdAt: msg?.createdAt || null
+    createdAt: msg?.createdAt || new Date().toISOString()
   });
 
   const mesajlariBirleştir = (yerel, uzak) => {
