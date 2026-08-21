@@ -2776,7 +2776,14 @@ const kulGiris = u => {
     }).catch(()=>{ setKul(u); DB.s("kul",u); });
     fetch("/api/users",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(u)}).catch(()=>{});
   };
-  const kulCikis = () => { setKul(null); DB.d("kul"); };
+  const kulCikis = () => {
+    setKul(null);
+    DB.d("kul");
+    setDilSec(null);
+    sessionStorage.setItem("sp", "diller");
+    window.history.pushState({ sayfa: "diller" }, "", "");
+    setSayfa("diller");
+  };
   const admKapat = () => { setAdAcik(false); };
   const admCikis = () => { setAdAcik(false); setAdGir(false); DB.d("adGir"); };
   const admGiris = () => {
@@ -2803,7 +2810,12 @@ const kulGiris = u => {
     return false;
   };
 
-  const git = s => { setSayfa(s); setDilSec(null); window.history.pushState({sayfa:s},"",""); };
+  const git = s => {
+    sessionStorage.setItem("sp", s);
+    setSayfa(s);
+    setDilSec(null);
+    window.history.pushState({ sayfa: s }, "", "");
+  };
   useEffect(()=>{
     const onPop = ()=>{ setSayfa(sessionStorage.getItem("sp")||"ana"); };
     window.addEventListener("popstate",onPop);
