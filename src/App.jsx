@@ -1037,7 +1037,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   const audioChunksRef = useRef([]);
   const [mikErr, setMikErr] = useState("");
   const [sure, setSure] = useState(kul?.plan==="Deneme"?1200:0);
-  const [dilMod, setDilMod] = useState(null);
+  const [dilMod, setDilMod] = useState(() => sessionStorage.getItem("dilMod") || null);
   useEffect(()=>{
     if(dilMod) sessionStorage.setItem("dilMod",dilMod);
   },[dilMod]);
