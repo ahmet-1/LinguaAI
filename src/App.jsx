@@ -1943,9 +1943,12 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
         </div>
 
         <div style={{flex:1,display:"flex",flexDirection:"column"}}>
-          <div style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}>
+          <div
+            ref={mesajListeRef}
+            style={{flex:1,overflowY:"auto",padding:16,display:"flex",flexDirection:"column",gap:12}}
+          >
             {msgs.map((m,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
+              <div key={m.id} style={{display:"flex",justifyContent:m.r==="user"?"flex-end":"flex-start",gap:8,alignItems:"flex-start"}}>
                 {m.r==="ai"&&<Av h={hoca} dil={dil} sz={32}/>}
                 <div style={{maxWidth:"70%"}}>
                   <div style={{fontSize:10,color:K.tx4,marginBottom:2,textAlign:m.r==="user"?"right":"left"}}>
