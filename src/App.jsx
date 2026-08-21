@@ -1160,15 +1160,34 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
   // ------------------------------------------------------------
   // SCROLL KONTROLÜ
-  // Kullanıcı geçmişi yukarıda okuyorsa ASLA otomatik aşağı atlama.
-  // Sadece kullanıcı zaten listenin altındaysa yeni mesaja iner.
+  // Ders ilk açıldığında DAİMA en son mesaja gider.
+  // İlk açılıştan sonra kullanıcı yukarı çıkıp geçmiş okuyorsa
+  // otomatik olarak aşağı atılmaz.
+  // Yeni mesaj geldiğinde kullanıcı zaten aşağıdaysa en alta iner.
   // ------------------------------------------------------------
   const mesajListeRef = useRef(null);
   const oncekiMesajSayisiRef = useRef(msgs.length);
+  const ilkAcilisScrollRef = useRef(false);
 
   useEffect(() => {
     const el = mesajListeRef.current;
-    if (!el) return;
+    if (!el || msgs.length === 0) return;
+
+    // Ders ilk kez gerçek mesajlarla açıldığında
+    // doğrudan en son mesaja git.
+    if (!ilkAcilisScrollRef.current) {
+      ilkAcilisScrollRef.current = true;
+
+      requestAnimationFrame(() => {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "auto"
+        });
+      });
+
+      oncekiMesajSayisiRef.current = msgs.length;
+      return;
+    }
 
     const eskiSayisi = oncekiMesajSayisiRef.current;
     const yeniSayisi = msgs.length;
@@ -1180,7 +1199,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     const mesafe = el.scrollHeight - el.scrollTop - el.clientHeight;
 
     // Kullanıcı zaten aşağıdaysa yeni mesaja git.
-    // Yukarıda okuyorsa yerinde kal.
+    // Yukarıda geçmiş okuyorsa yerinde kal.
     if (mesafe < 180) {
       requestAnimationFrame(() => {
         el.scrollTo({
