@@ -2829,6 +2829,10 @@ const kulGiris = u => {
 
   if(adAcik) return <AdminPanel kapat={admKapat} admCikis={admCikis} setDers={setDers} kul={kul}/>;
   if(ders) return <DersEkrani dilId={ders.dil} hoca={ders.hoca} kul={ders.kul||kul} kapat={()=>{
+    if (ders?.kul) {
+      setKul(ders.kul);
+      DB.s("kul", ders.kul);
+    }
     setDers(null);
     sessionStorage.removeItem("ders");
     sessionStorage.removeItem("dilMod");
