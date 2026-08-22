@@ -9,6 +9,7 @@ export default async function handler(req, res) {
   var audioBase64 = body.audioBase64;
   var referenceText = body.referenceText;
   var language = body.language;
+  var audioMimeType = body.audioMimeType || "audio/wav; codecs=audio/pcm; samplerate=16000";
 
   if (!audioBase64 || !referenceText) {
     res.status(400).json({ error: "Eksik parametre" });
@@ -40,7 +41,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Content-Type": audioMimeType,
         "Pronunciation-Assessment": header,
         "Accept": "application/json"
       },
@@ -49,7 +50,7 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       var errText = await response.text();
-      res.status(response.status).json({ error: "Azure hata: " + errText.substring(0, 200) });
+      res.status(response.status).json({ error: "Azure hata (" + response.status + "): " + errText.substring(0, 800) });
       return;
     }
 
