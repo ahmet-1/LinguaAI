@@ -2422,7 +2422,8 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
                     <div style={{display:"flex",gap:4}}>
                       <button onClick={()=>{
                         const h=(HOCALAR[d.id]||[]).find(x=>x.id===dr.hocaId)||(HOCALAR[d.id]||[])[0];
-                        if(h){ kapat(); setTimeout(()=>setDers({dil:d.id,hoca:h,kul:kul||{id:"admin",ad:"Admin",plan:"Sinirstiz",durum:"Aktif",trialStart:0}}),100); }
+                        if(h){ kapat(); sessionStorage.setItem("dersDonusSayfasi", "diller");
+                        setTimeout(()=>setDers({dil:d.id,hoca:h,kul:kul||{id:"admin",ad:"Admin",plan:"Sinirstiz",durum:"Aktif",trialStart:0}}),100); }
                       }} style={{padding:"5px 10px",borderRadius:6,background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",cursor:"pointer",fontSize:11,fontWeight:600}}>
                         Devam Et
                       </button>
@@ -2707,7 +2708,10 @@ export default function App() {
       try{
         const {dil:dilId,hocaId}=JSON.parse(p);
         const h=(HOCALAR[dilId]||[]).find(x=>x.id===hocaId)||(HOCALAR[dilId]||[])[0];
-        if(h) setDers({dil:dilId,hoca:h,kul:kul});
+        if(h) {
+          sessionStorage.setItem("dersDonusSayfasi", "profil");
+          setDers({dil:dilId,hoca:h,kul:kul});
+        }
       }catch(e){}
     }
   },[kul]);
@@ -2780,9 +2784,11 @@ const kulGiris = u => {
     setKul(null);
     DB.d("kul");
     setDilSec(null);
-    sessionStorage.setItem("sp", "diller");
-    window.history.pushState({ sayfa: "diller" }, "", "");
-    setSayfa("diller");
+    const dersDonusSayfasi = sessionStorage.getItem("dersDonusSayfasi") || "diller";
+    sessionStorage.removeItem("dersDonusSayfasi");
+    sessionStorage.setItem("sp", dersDonusSayfasi);
+    window.history.pushState({ sayfa: dersDonusSayfasi }, "", "");
+    setSayfa(dersDonusSayfasi);
   };
   const admKapat = () => { setAdAcik(false); };
   const admCikis = () => { setAdAcik(false); setAdGir(false); DB.d("adGir"); };
@@ -3049,6 +3055,7 @@ const kulGiris = u => {
                   if(!kul&&!adGir){setAuthMod("kayit");setAuthAcik(true);return;}
                   if(kul&&!dersGir()){alert("⏰ 5 günlük deneme süreniz dolmuştur.\n\nDerslere devam etmek için Premium üyeliğe geçmeniz gerekmektedir.\n\n⚠️ Premium üyeliğe geçmezseniz hesabınız 1 hafta içinde silinecektir.");git("fiyat");return;}
                   const k2 = adGir?{id:"admin",ad:"Admin",plan:"Sınırsız",durum:"Aktif",trialStart:0}:kul;
+                  sessionStorage.setItem("dersDonusSayfasi", sayfa);
                   setDers({dil:dilSec.id,hoca:h,kul:k2});
                 }}>
                 <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Av h={h} dil={dilSec} sz={80}/></div>
@@ -3182,6 +3189,7 @@ const kulGiris = u => {
                   const dilHocalar = HOCALAR[d.id] || [];
                   const sonHoca = dilHocalar.find(h=>h.id===hocaId) || dilHocalar[0];
                   if (sonHoca) {
+                    sessionStorage.setItem("dersDonusSayfasi", "profil");
                     setDers({dil:d.id, hoca:sonHoca, kul:kul});
                   } else {
                     setDilSec(d); git("diller");
