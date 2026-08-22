@@ -2784,11 +2784,9 @@ const kulGiris = u => {
     setKul(null);
     DB.d("kul");
     setDilSec(null);
-    const dersDonusSayfasi = ders?.donusSayfasi || sessionStorage.getItem("dersDonusSayfasi") || "diller";
-    sessionStorage.removeItem("dersDonusSayfasi");
-    sessionStorage.setItem("sp", dersDonusSayfasi);
-    window.history.pushState({ sayfa: dersDonusSayfasi }, "", "");
-    setSayfa(dersDonusSayfasi);
+    sessionStorage.setItem("sp", "diller");
+    window.history.pushState({ sayfa: "diller" }, "", "");
+    setSayfa("diller");
   };
   const admKapat = () => { setAdAcik(false); };
   const admCikis = () => { setAdAcik(false); setAdGir(false); DB.d("adGir"); };
@@ -2834,9 +2832,10 @@ const kulGiris = u => {
     setDers(null);
     sessionStorage.removeItem("ders");
     sessionStorage.removeItem("dilMod");
-    sessionStorage.setItem("sp", "diller");
-    window.history.pushState({ sayfa: "diller" }, "", "");
-    setSayfa("diller");
+    sessionStorage.removeItem("dersDonusSayfasi");
+    sessionStorage.setItem("sp", "profil");
+    window.history.pushState({ sayfa: "profil" }, "", "");
+    setSayfa("profil");
   }}/>;
 
   const bP={padding:"13px 28px",background:"linear-gradient(135deg,"+K.g2+","+K.t2+")",color:"#fff",border:"none",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:15,boxShadow:"0 4px 20px "+K.g2+"55"};
