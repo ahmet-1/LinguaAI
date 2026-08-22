@@ -2710,7 +2710,7 @@ export default function App() {
         const h=(HOCALAR[dilId]||[]).find(x=>x.id===hocaId)||(HOCALAR[dilId]||[])[0];
         if(h) {
           sessionStorage.setItem("dersDonusSayfasi", "profil");
-          setDers({dil:dilId,hoca:h,kul:kul});
+          setDers({dil:dilId,hoca:h,kul:kul,donusSayfasi:"profil"});
         }
       }catch(e){}
     }
@@ -2784,7 +2784,7 @@ const kulGiris = u => {
     setKul(null);
     DB.d("kul");
     setDilSec(null);
-    const dersDonusSayfasi = sessionStorage.getItem("dersDonusSayfasi") || "diller";
+    const dersDonusSayfasi = ders?.donusSayfasi || sessionStorage.getItem("dersDonusSayfasi") || "diller";
     sessionStorage.removeItem("dersDonusSayfasi");
     sessionStorage.setItem("sp", dersDonusSayfasi);
     window.history.pushState({ sayfa: dersDonusSayfasi }, "", "");
@@ -3190,7 +3190,7 @@ const kulGiris = u => {
                   const sonHoca = dilHocalar.find(h=>h.id===hocaId) || dilHocalar[0];
                   if (sonHoca) {
                     sessionStorage.setItem("dersDonusSayfasi", "profil");
-                    setDers({dil:d.id, hoca:sonHoca, kul:kul});
+                    setDers({dil:d.id, hoca:sonHoca, kul:kul, donusSayfasi:"profil"});
                   } else {
                     setDilSec(d); git("diller");
                   }
