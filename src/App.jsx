@@ -2125,6 +2125,16 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
               </div>
             ) : telaffuzSonuc.error ? (
               <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
+              <div style={{textAlign:"center",padding:20}}>
+                <button onClick={telaffuzTestiniBitir}
+                  style={{background:K.gL,border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
+                  🔄 Tekrar Dene
+                </button>
+                <button onClick={()=>{setTelaffuzAcik(false);setTelaffuzSonuc(null);}}
+                  style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
+                  Daha Sonra
+                </button>
+              </div>
             ) : (
               <div>
                 <div style={{textAlign:"center",marginBottom:16}}>
@@ -2153,7 +2163,20 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                           background:w.accuracyScore>=80?"rgba(46,125,50,0.2)":"rgba(198,40,40,0.2)",
                           color:w.accuracyScore>=80?K.gL:K.errL}}>
                           {w.word} ({Math.round(w.accuracyScore||0)})
-                        </span>
+
+                        {w.accuracyScore < 80 && (
+                          <span
+                            onClick={() => {
+                              const utter = new SpeechSynthesisUtterance(w.word);
+                              utter.lang = dilMod === "hedef" ? dil.mic : "tr-TR";
+                              utter.rate = 0.8;
+                              window.speechSynthesis.speak(utter);
+                            }}
+                            style={{marginLeft:4,cursor:"pointer",opacity:0.7}}
+                            title="Dinle">
+                            🔊
+                          </span>
+                        )}                        </span>
                       ))}
                     </div>
                   </div>
