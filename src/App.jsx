@@ -2122,6 +2122,10 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
               <div style={{textAlign:"center",padding:20}}>
                 <div style={{fontSize:40,marginBottom:12}}>🎤</div>
                 <div style={{color:K.gL,fontSize:16,fontWeight:700}}>{telaffuzSonuc.info}</div>
+                <button onClick={telaffuzTestiniBitir}
+                  style={{background:K.gL,border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,marginTop:12}}>
+                  ✅ Bitir ve Gönder
+                </button>
               </div>
             ) : telaffuzSonuc.error ? (
               <>
