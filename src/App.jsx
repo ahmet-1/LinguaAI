@@ -2124,17 +2124,19 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                 <div style={{color:K.gL,fontSize:16,fontWeight:700}}>{telaffuzSonuc.info}</div>
               </div>
             ) : telaffuzSonuc.error ? (
-              <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
-              <div style={{textAlign:"center",padding:20}}>
-                <button onClick={telaffuzTestiniBitir}
-                  style={{background:K.gL,border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
-                  🔄 Tekrar Dene
-                </button>
-                <button onClick={()=>{setTelaffuzAcik(false);setTelaffuzSonuc(null);}}
-                  style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
-                  Daha Sonra
-                </button>
-              </div>
+              <>
+                <div style={{color:K.errL,textAlign:"center",padding:20,fontSize:16}}>{telaffuzSonuc.error}</div>
+                <div style={{textAlign:"center",padding:20}}>
+                  <button onClick={telaffuzTestiniBitir}
+                    style={{background:K.gL,border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
+                    🔄 Tekrar Dene
+                  </button>
+                  <button onClick={()=>{setTelaffuzAcik(false);setTelaffuzSonuc(null);}}
+                    style={{background:"rgba(255,255,255,0.12)",border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,margin:"10px 5px"}}>
+                    Daha Sonra
+                  </button>
+                </div>
+              </>
             ) : (
               <div>
                 <div style={{textAlign:"center",marginBottom:16}}>
