@@ -1,28 +1,50 @@
 import { useState, useRef, useEffect } from "react";
 
 // Azure Gerçek Hoca Sesiyle Dinletme
-const playAzureWord = async (wordText, langCode) => {
-  try {
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: wordText,
-        language: langCode || 'ar-SA',
-        gender: 'male'
-      , gender: (selectedTutor && selectedTutor.gender) || (activeHoca && activeHoca.gender) || (hoca && hoca.gender) || "male" })
-    });
-    if (res.ok) {
-      const blob = await res.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-    } else {
-      playAzureWord(w.word, dilMod === "hedef" ? (dil?.mic || "ar-SA") : "tr-TR");
+const playAzureWord = async (wordText, langCode, forcedGender) => {
+    try {
+      if (!wordText) return;
+      const hocaCinsiyet = forcedGender || (selectedTutor && selectedTutor.gender) || (activeHoca && activeHoca.gender) || (hoca && hoca.gender) || 'male';
+      const seciliDil = langCode || (selectedLang && selectedLang.code) || 'ar-SA';
+      
+      const res = await fetch('/api/azure-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          text: wordText, 
+          language: seciliDil,
+          gender: hocaCinsiyet
+        })
+      });
+      
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audio.play().catch(e => {
+          // Fallback tarayıcı sesi
+          if ('speechSynthesis' in window) {
+            const ut = new SpeechSynthesisUtterance(wordText);
+            ut.lang = seciliDil;
+            window.speechSynthesis.speak(ut);
+          }
+        });
+      } else {
+        // API yanıt vermezse tarayıcı TTS devreye girer
+        if ('speechSynthesis' in window) {
+          const ut = new SpeechSynthesisUtterance(wordText);
+          ut.lang = seciliDil;
+          window.speechSynthesis.speak(ut);
+        }
+      }
+    } catch (e) {
+      console.error("Ses çalma hatası:", e);
+      if ('speechSynthesis' in window) {
+        const ut = new SpeechSynthesisUtterance(wordText);
+        window.speechSynthesis.speak(ut);
+      }
     }
-  } catch (e) {
-    playAzureWord(w.word, dilMod === "hedef" ? (dil?.mic || "ar-SA") : "tr-TR");
-  }
-};
+  };
 
 
 const K = {
