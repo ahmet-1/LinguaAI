@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { audioBase64, referenceText, language } = req.body;
+    const { audioBase64, referenceText, language, audioMimeType } = req.body;
 
     if (!audioBase64 || !referenceText) {
       return res.status(400).json({ error: "Ses veya referans metin eksik." });
@@ -19,6 +19,18 @@ export default async function handler(req, res) {
 
     const audioBuffer = Buffer.from(audioBase64, "base64");
     const lang = language || "tr-TR";
+
+    // Tarayıcının gönderdiği ses tipine göre Azure Content-Type belirleme
+    let contentType = "audio/ogg; codecs=opus";
+    const mime = (audioMimeType || "").toLowerCase();
+
+    if (mime.includes("wav")) {
+      contentType = "audio/wav; codecs=audio/pcm; samplerate=16000";
+    } else if (mime.includes("ogg")) {
+      contentType = "audio/ogg; codecs=opus";
+    } else if (mime.includes("webm")) {
+      contentType = "audio/webm; codecs=opus";
+    }
 
     const pronParams = {
       ReferenceText: referenceText,
@@ -29,7 +41,6 @@ export default async function handler(req, res) {
     };
 
     const pronHeader = Buffer.from(JSON.stringify(pronParams)).toString("base64");
-
     const endpoint = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(lang)}&format=detailed`;
 
     const azureRes = await fetch(endpoint, {
@@ -37,26 +48,38 @@ export default async function handler(req, res) {
       headers: {
         "Ocp-Apim-Subscription-Key": key,
         "Pronunciation-Assessment": pronHeader,
-        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Content-Type": contentType,
         "Accept": "application/json;text/xml"
       },
       body: audioBuffer
     });
 
-    const data = await azureRes.json();
+    const rawText = await azureRes.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return res.status(azureRes.status || 400).json({
+        error: "Azure ses biçimini çözümleyemedi. Lütfen tekrar deneyin.",
+        raw: rawText
+      });
+    }
 
     if (!azureRes.ok) {
-      return res.status(azureRes.status).json({ error: data.Message || "Azure API Hatası", details: data });
+      return res.status(azureRes.status).json({
+        error: data.Message || data.RecognitionStatus || "Azure API Hatası",
+        details: data
+      });
     }
 
     const nbest = (data.NBest && data.NBest[0]) ? data.NBest[0] : null;
 
     if (!nbest || !nbest.PronunciationAssessment) {
       return res.status(200).json({
-        pronScore: 50,
-        accuracyScore: 50,
-        fluencyScore: 50,
-        completenessScore: 50,
+        pronScore: 60,
+        accuracyScore: 60,
+        fluencyScore: 60,
+        completenessScore: 60,
         words: []
       });
     }
