@@ -1,5 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 
+// Azure Gerçek Hoca Sesiyle Dinletme
+const playAzureWord = async (wordText, langCode) => {
+  try {
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: wordText,
+        language: langCode || 'ar-SA',
+        gender: 'male'
+      })
+    });
+    if (res.ok) {
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+    } else {
+      playAzureWord(w.word, dilMod === "hedef" ? (dil?.mic || "ar-SA") : "tr-TR");
+    }
+  } catch (e) {
+    playAzureWord(w.word, dilMod === "hedef" ? (dil?.mic || "ar-SA") : "tr-TR");
+  }
+};
+
+
 const K = {
   bg:"#071510",bg2:"#0a1e13",bg3:"#0d2618",card:"#0f2c1c",
   bdr:"#1a3d26",bdr2:"#1f4d30",bdr3:"#266040",
@@ -2173,10 +2199,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
                         {w.accuracyScore < 80 && (
                           <span
                             onClick={() => {
-                              const utter = new SpeechSynthesisUtterance(w.word);
-                              utter.lang = dilMod === "hedef" ? dil.mic : "tr-TR";
-                              utter.rate = 0.8;
-                              window.speechSynthesis.speak(utter);
+                              playAzureWord(w.word, dilMod === "hedef" ? (dil?.mic || "ar-SA") : "tr-TR");
                             }}
                             style={{marginLeft:4,cursor:"pointer",opacity:0.7}}
                             title="Dinle">
