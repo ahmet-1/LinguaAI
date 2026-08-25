@@ -2138,7 +2138,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
             {!telaffuzSonuc ? (
               <div style={{textAlign:"center",padding:20}}>
                 <div style={{fontSize:40,marginBottom:12}}>🎤</div>
-                <div style={{color:K.tx2,fontSize:16}}>Dinleniyor... (150 saniye)</div>
+                <div style={{color:K.tx2,fontSize:16}}>🎤 Dinleniyor... Lütfen cümleyi okuyun</div>
                 <button onClick={telaffuzTestiniBitir}
                   style={{background:K.gL,border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",cursor:"pointer",fontWeight:700,marginTop:12}}>
                   ✅ Bitir ve Gönder
@@ -2643,7 +2643,7 @@ function AdminPanel({kapat, admCikis, setDers, kul}) {
               <div style={{textAlign:"center",padding:16}}>
                 <div style={{fontSize:50,marginBottom:12}}>🎁</div>
                 <div style={{color:K.tx,fontSize:20,fontWeight:700,marginBottom:6}}>Gönderildi!</div>
-                <button onClick={()=>{setHOk(false);setHE("");}} style={bG}>Tamam</button>
+                <button onClick={()=>{setHOk(false);setHE("");}} style={bG}>✅ Değerlendirmeyi Kapat</button>
               </div>
             ):(
               <>
