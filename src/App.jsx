@@ -1,6 +1,6 @@
 
 // Standart 16kHz Mono PCM WAV Dönüştürücü
-function encodeWAV(samples, sampleRate = 16000) {
+(samples, sampleRate = 16000) {
   const buffer = new ArrayBuffer(44 + samples.length * 2);
   const view = new DataView(buffer);
 
