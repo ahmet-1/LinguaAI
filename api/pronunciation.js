@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   var key = process.env.AZURE_SPEECH_KEY;
-  var region = process.env.AZURE_SPEECH_REGION || "eastus";
+  var region = process.env.AZURE_SPEECH_REGION || "swedencentral";
 
   if (!key) {
     res.status(500).json({ error: "Azure key tanimli degil" });
