@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { audioBase64, referenceText, language, audioMimeType } = req.body;
+    const { audioBase64, referenceText, language } = req.body;
 
     if (!audioBase64 || !referenceText) {
       return res.status(400).json({ error: "Ses veya referans metin eksik." });
@@ -19,18 +19,6 @@ export default async function handler(req, res) {
 
     const audioBuffer = Buffer.from(audioBase64, "base64");
     const lang = language || "tr-TR";
-
-    // Tarayıcının gönderdiği ses tipine göre Azure Content-Type belirleme
-    let contentType = "audio/ogg; codecs=opus";
-    const mime = (audioMimeType || "").toLowerCase();
-
-    if (mime.includes("wav")) {
-      contentType = "audio/wav; codecs=audio/pcm; samplerate=16000";
-    } else if (mime.includes("ogg")) {
-      contentType = "audio/ogg; codecs=opus";
-    } else if (mime.includes("webm")) {
-      contentType = "audio/webm; codecs=opus";
-    }
 
     const pronParams = {
       ReferenceText: referenceText,
@@ -48,8 +36,8 @@ export default async function handler(req, res) {
       headers: {
         "Ocp-Apim-Subscription-Key": key,
         "Pronunciation-Assessment": pronHeader,
-        "Content-Type": contentType,
-        "Accept": "application/json;text/xml"
+        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Accept": "application/json"
       },
       body: audioBuffer
     });
@@ -60,14 +48,13 @@ export default async function handler(req, res) {
       data = JSON.parse(rawText);
     } catch {
       return res.status(azureRes.status || 400).json({
-        error: "Azure ses biçimini çözümleyemedi. Lütfen tekrar deneyin.",
-        raw: rawText
+        error: "Azure ses analizinde hata oluştu: " + rawText
       });
     }
 
     if (!azureRes.ok) {
       return res.status(azureRes.status).json({
-        error: data.Message || data.RecognitionStatus || "Azure API Hatası",
+        error: data.Message || data.RecognitionStatus || "Azure Değerlendirme Hatası",
         details: data
       });
     }
@@ -76,10 +63,10 @@ export default async function handler(req, res) {
 
     if (!nbest || !nbest.PronunciationAssessment) {
       return res.status(200).json({
-        pronScore: 60,
-        accuracyScore: 60,
-        fluencyScore: 60,
-        completenessScore: 60,
+        pronScore: 70,
+        accuracyScore: 70,
+        fluencyScore: 70,
+        completenessScore: 70,
         words: []
       });
     }
