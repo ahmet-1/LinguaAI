@@ -47,15 +47,28 @@ export default async function handler(req, res) {
     try {
       data = JSON.parse(rawText);
     } catch {
-      return res.status(azureRes.status || 400).json({
-        error: "Azure ses analizinde hata oluştu: " + rawText
+      return res.status(400).json({
+        error: "Ses analizi yapılamadı. Lütfen mikrofona biraz daha yaklaşarak tekrar deneyin."
       });
     }
 
-    if (!azureRes.ok) {
-      return res.status(azureRes.status).json({
-        error: data.Message || data.RecognitionStatus || "Azure Değerlendirme Hatası",
-        details: data
+    const status = data.RecognitionStatus;
+
+    if (status === "InitialSilenceTimeout") {
+      return res.status(200).json({
+        error: "Ses algılanamadı. Lütfen 'Telaffuz Testi'ne bastıktan hemen sonra metni net bir şekilde okuyun."
+      });
+    }
+
+    if (status === "NoMatch") {
+      return res.status(200).json({
+        error: "Söyledikleriniz metinle eşleştirilemedi. Lütfen ekrandaki cümleyi tane tane okuyun."
+      });
+    }
+
+    if (!azureRes.ok && status !== "Success") {
+      return res.status(200).json({
+        error: "Telaffuz değerlendirilemedi (" + (status || "Hata") + "). Lütfen tekrar deneyin."
       });
     }
 
@@ -63,10 +76,10 @@ export default async function handler(req, res) {
 
     if (!nbest || !nbest.PronunciationAssessment) {
       return res.status(200).json({
-        pronScore: 70,
-        accuracyScore: 70,
-        fluencyScore: 70,
-        completenessScore: 70,
+        pronScore: 50,
+        accuracyScore: 50,
+        fluencyScore: 50,
+        completenessScore: 50,
         words: []
       });
     }
