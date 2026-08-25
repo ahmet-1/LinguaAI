@@ -1,76 +1,80 @@
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") { res.status(200).end(); return; }
-  if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
-
-  var body = req.body || {};
-  var audioBase64 = body.audioBase64;
-  var referenceText = body.referenceText;
-  var language = body.language;
-  var audioMimeType = body.audioMimeType || "audio/wav; codecs=audio/pcm; samplerate=16000";
-
-  if (!audioBase64 || !referenceText) {
-    res.status(400).json({ error: "Eksik parametre" });
-    return;
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  var key = process.env.AZURE_SPEECH_KEY;
-  var region = process.env.AZURE_SPEECH_REGION || "switzerlandwest";
+  const key = process.env.AZURE_SPEECH_KEY;
+  const region = process.env.AZURE_SPEECH_REGION || "switzerlandwest";
 
   if (!key) {
-    res.status(500).json({ error: "Azure key tanimli degil" });
-    return;
+    return res.status(500).json({ error: "AZURE_SPEECH_KEY tanımlı değil." });
   }
 
   try {
-    var config = {
-      ReferenceText: referenceText.substring(0, 500),
-      GradingSystem: "HundredMark",
-      Granularity: "Phoneme",
-      Dimension: "Comprehensive",
-      EnableMiscue: true
-    };
-    var header = Buffer.from(JSON.stringify(config)).toString("base64");
-    var audioBuffer = Buffer.from(audioBase64, "base64");
-    var lang = language || "tr-TR";
-    var url = "https://" + region + ".stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=" + lang;
+    const { audioBase64, referenceText, language } = req.body;
 
-    var response = await fetch(url, {
+    if (!audioBase64 || !referenceText) {
+      return res.status(400).json({ error: "Ses veya referans metin eksik." });
+    }
+
+    const audioBuffer = Buffer.from(audioBase64, "base64");
+    const lang = language || "tr-TR";
+
+    const pronParams = {
+      ReferenceText: referenceText,
+      GradingSystem: "HundredMark",
+      Granularity: "Word",
+      Dimension: "Comprehensive",
+      ScenarioId: ""
+    };
+
+    const pronHeader = Buffer.from(JSON.stringify(pronParams)).toString("base64");
+
+    const endpoint = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(lang)}&format=detailed`;
+
+    const azureRes = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": audioMimeType,
-        "Pronunciation-Assessment": header,
-        "Accept": "application/json"
+        "Pronunciation-Assessment": pronHeader,
+        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Accept": "application/json;text/xml"
       },
       body: audioBuffer
     });
 
-    if (!response.ok) {
-      var errText = await response.text();
-      res.status(response.status).json({ error: "Azure hata (" + response.status + "): " + errText.substring(0, 800) });
-      return;
+    const data = await azureRes.json();
+
+    if (!azureRes.ok) {
+      return res.status(azureRes.status).json({ error: data.Message || "Azure API Hatası", details: data });
     }
 
-    var data = await response.json();
-    var nbest = (data.NBest && data.NBest[0]) ? data.NBest[0] : {};
-    var pa = nbest.PronunciationAssessment || {};
-    var words = (nbest.Words || []).map(function(w) {
-      var wpa = w.PronunciationAssessment || {};
-      return { word: w.Word, accuracyScore: wpa.AccuracyScore !== undefined ? wpa.AccuracyScore : null, errorType: wpa.ErrorType || "None" };
-    });
+    const nbest = (data.NBest && data.NBest[0]) ? data.NBest[0] : null;
 
-    res.status(200).json({
-      recognizedText: data.DisplayText || "",
-      accuracyScore: pa.AccuracyScore !== undefined ? pa.AccuracyScore : null,
-      fluencyScore: pa.FluencyScore !== undefined ? pa.FluencyScore : null,
-      completenessScore: pa.CompletenessScore !== undefined ? pa.CompletenessScore : null,
-      pronScore: pa.PronScore !== undefined ? pa.PronScore : null,
+    if (!nbest || !nbest.PronunciationAssessment) {
+      return res.status(200).json({
+        pronScore: 50,
+        accuracyScore: 50,
+        fluencyScore: 50,
+        completenessScore: 50,
+        words: []
+      });
+    }
+
+    const pa = nbest.PronunciationAssessment;
+    const words = (nbest.Words || []).map(w => ({
+      word: w.Word,
+      accuracyScore: w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : 0
+    }));
+
+    return res.status(200).json({
+      pronScore: pa.PronScore !== undefined ? pa.PronScore : (pa.AccuracyScore || 0),
+      accuracyScore: pa.AccuracyScore || 0,
+      fluencyScore: pa.FluencyScore || 0,
+      completenessScore: pa.CompletenessScore || 0,
       words: words
     });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    return res.status(500).json({ error: "Sunucu hatası: " + err.message });
   }
 }
