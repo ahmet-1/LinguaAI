@@ -1621,6 +1621,15 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
     return new Blob([view], { type: 'audio/wav' });
   };
 
+  
+  const telaffuzTestiniBitir = () => {
+    try {
+      if (window._telaffuzRecorder && window._telaffuzRecorder.state !== 'inactive') {
+        window._telaffuzRecorder.stop();
+      }
+    } catch(e) {}
+  };
+
   const telaffuzTesti = async (referenceText) => {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
