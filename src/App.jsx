@@ -1692,9 +1692,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
 
               const data = await res.json();
               setTelaffuzSonuc(data);
-            } catch (e) {
-              setTelaffuzSonuc({ error: "Değerlendirme servisine ulaşılamadı." });
-            }
+            } catch(err) { setTelaffuzSonuc({ error: "Hata detayı: " + err.message }); }
           };
           reader.readAsDataURL(wavBlob);
         } catch (e) {
