@@ -1,100 +1,89 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
-  }
-
-  const { audioBase64, referenceText, language } = req.body || {};
-  const ref = (referenceText || "Merhaba").trim();
-  const wordsList = ref.split(/\s+/).filter(Boolean);
-
-  // Güvenli varsayılan skor motoru (Asla hata verdirtmez)
-  const generateFallbackScore = () => {
-    const baseAcc = Math.floor(Math.random() * 15) + 82; // 82 - 96 arası
-    const baseFlu = Math.floor(Math.random() * 12) + 80;
-    const pron = Math.round((baseAcc * 0.6) + (baseFlu * 0.4));
-    
-    const words = wordsList.map((w, idx) => {
-      // Rastgele bir kelimeyi hafif düşük vererek eğitsel hoparlör simgesini aktif tutar
-      const score = (idx === 1 && wordsList.length > 2) ? 74 : (Math.floor(Math.random() * 16) + 84);
-      return {
-        word: w,
-        accuracyScore: score
-      };
-    });
-
-    return {
-      pronScore: pron,
-      accuracyScore: baseAcc,
-      fluencyScore: baseFlu,
-      completenessScore: 90,
-      words: words
-    };
-  };
-
-  const key = process.env.AZURE_SPEECH_KEY;
-  const region = process.env.AZURE_SPEECH_REGION || "switzerlandwest";
-
-  if (!key || !audioBase64) {
-    return res.status(200).json(generateFallbackScore());
-  }
-
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  
   try {
-    const audioBuffer = Buffer.from(audioBase64, "base64");
-    const lang = language || "tr-TR";
+    const { audioBase64, referenceText, language } = req.body || {};
+    const key = process.env.AZURE_SPEECH_KEY;
+    const region = process.env.AZURE_SPEECH_REGION || 'eastus';
 
-    const pronParams = {
-      ReferenceText: ref,
+    if (!key) return res.status(500).json({ error: 'Azure Speech Key bulunamadı.' });
+
+    const lang = language || 'ar-SA';
+    const cleanRef = (referenceText || '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();
+
+    const pronConfig = {
+      ReferenceText: cleanRef,
       GradingSystem: "HundredMark",
       Granularity: "Word",
       Dimension: "Comprehensive",
-      ScenarioId: ""
+      EnableMiscue: true
     };
 
-    const pronHeader = Buffer.from(JSON.stringify(pronParams)).toString("base64");
-    const endpoint = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${encodeURIComponent(lang)}&format=detailed`;
+    const pronHeader = Buffer.from(JSON.stringify(pronConfig)).toString('base64');
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
 
-    const azureRes = await fetch(endpoint, {
-      method: "POST",
+    const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${lang}&format=detailed`;
+
+    const azureRes = await fetch(url, {
+      method: 'POST',
       headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Pronunciation-Assessment": pronHeader,
-        "Content-Type": "audio/ogg; codecs=opus",
-        "Accept": "application/json"
+        'Accept': 'application/json',
+        'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+        'Ocp-Apim-Subscription-Key': key,
+        'Pronunciation-Assessment': pronHeader
       },
       body: audioBuffer
     });
 
-    const text = await azureRes.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      return res.status(200).json(generateFallbackScore());
-    }
+    const data = await azureRes.json();
+    const nbest = data.NBest && data.NBest[0];
 
-    const nbest = (data.NBest && data.NBest[0]) ? data.NBest[0] : null;
-    const pa = nbest ? nbest.PronunciationAssessment : null;
-
-    if (azureRes.ok && pa) {
-      const words = (nbest.Words || []).map(w => ({
-        word: w.Word,
-        accuracyScore: w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : 85
-      }));
-
+    if (!nbest) {
       return res.status(200).json({
-        pronScore: pa.PronScore !== undefined ? pa.PronScore : (pa.AccuracyScore || 85),
-        accuracyScore: pa.AccuracyScore || 85,
-        fluencyScore: pa.FluencyScore || 80,
-        completenessScore: pa.CompletenessScore || 90,
-        words: words.length > 0 ? words : generateFallbackScore().words
+        error: "Ses anlaşılamadı. Lütfen mikrofona daha yakın ve net okuyun."
       });
     }
 
-    // Azure NoMatch veya format uyuşmazlığı verirse yedek motoru devreye sok
-    return res.status(200).json(generateFallbackScore());
+    const pa = nbest.PronunciationAssessment || {};
+    
+    // Kelime kelime analiz ve hata tespiti
+    const words = (nbest.Words || []).map(w => {
+      const wScore = w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : 0;
+      const errorType = w.PronunciationAssessment ? w.PronunciationAssessment.ErrorType : 'None';
+      let durum = 'dogru';
+      let durumMesaj = 'Doğru okundu';
+      
+      if (errorType === 'Mispronunciation' || wScore < 60) {
+        durum = 'yanlis';
+        durumMesaj = 'Hatalı telaffuz';
+      } else if (errorType === 'Omission') {
+        durum = 'atlanmis';
+        durumMesaj = 'Okunmadı / Atlandı';
+      } else if (wScore < 80) {
+        durum = 'orta';
+        durumMesaj = 'Geliştirilebilir';
+      }
+
+      return {
+        kelime: w.Word,
+        skor: Math.round(wScore),
+        durum: durum,
+        durumMesaj: durumMesaj
+      };
+    });
+
+    const hataliKelimeler = words.filter(w => w.durum === 'yanlis' || w.durum === 'atlanmis');
+
+    return res.status(200).json({
+      genelSkor: Math.round(pa.PronScore || 0),
+      dogruluk: Math.round(pa.AccuracyScore || 0),
+      akicilik: Math.round(pa.FluencyScore || 0),
+      kelimeler: words,
+      hataliKelimeler: hataliKelimeler,
+      okunanMetin: nbest.Display || cleanRef
+    });
 
   } catch (err) {
-    // Herhangi bir ağ hatasında dahi kullanıcıyı mağdur etme
-    return res.status(200).json(generateFallbackScore());
+    return res.status(500).json({ error: "Değerlendirme yapılamadı: " + err.message });
   }
 }

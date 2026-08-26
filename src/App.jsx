@@ -2895,7 +2895,7 @@ export default function App() {
   const [dilSec, setDilSec] = useState(null);
   const [cocuk, setCocuk] = useState(false);
   const [ders, setDers] = useState(()=>{
-    try{const d=sessionStorage.getItem("ders");return d?JSON.parse(d):null;}catch{return null;}
+    try{const d=(window.location.search.includes("reset") ? null : sessionStorage.getItem("ders"));return d?JSON.parse(d):null;}catch{return null;}
   });
   useEffect(()=>{
     if(ders) sessionStorage.setItem("ders",JSON.stringify(ders));
