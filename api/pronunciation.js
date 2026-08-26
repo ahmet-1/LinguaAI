@@ -6,10 +6,11 @@ export default async function handler(req, res) {
     const key = process.env.AZURE_SPEECH_KEY;
     const region = process.env.AZURE_SPEECH_REGION || 'eastus';
 
-    if (!key) return res.status(500).json({ error: 'Azure Speech Key bulunamadı.' });
+    if (!key) return res.status(500).json({ error: 'Azure Speech API anahtarı eksik.' });
+    if (!audioBase64) return res.status(400).json({ error: 'Ses kaydı alınamadı.' });
 
     const lang = language || 'ar-SA';
-    const cleanRef = (referenceText || '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();
+    const cleanRef = (referenceText || 'مرحبا').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();
 
     const pronConfig = {
       ReferenceText: cleanRef,
@@ -35,38 +36,50 @@ export default async function handler(req, res) {
       body: audioBuffer
     });
 
-    const data = await azureRes.json();
-    const nbest = data.NBest && data.NBest[0];
+    const resText = await azureRes.text();
+    if (!resText || resText.trim().length === 0) {
+      return res.status(200).json({
+        error: "Ses algılanamadı. Lütfen mikrofona daha yakın ve net konuşun."
+      });
+    }
 
+    let data;
+    try {
+      data = JSON.parse(resText);
+    } catch (e) {
+      return res.status(200).json({
+        error: "Ses formatı işlenemedi. Lütfen tekrar deneyin."
+      });
+    }
+
+    const nbest = data.NBest && data.NBest[0];
     if (!nbest) {
       return res.status(200).json({
-        error: "Ses anlaşılamadı. Lütfen mikrofona daha yakın ve net okuyun."
+        error: "Ses tanınamadı. Lütfen okumayı biraz daha yüksek sesle tekrarlayın."
       });
     }
 
     const pa = nbest.PronunciationAssessment || {};
-    
-    // Kelime kelime analiz ve hata tespiti
     const words = (nbest.Words || []).map(w => {
       const wScore = w.PronunciationAssessment ? w.PronunciationAssessment.AccuracyScore : 0;
       const errorType = w.PronunciationAssessment ? w.PronunciationAssessment.ErrorType : 'None';
       let durum = 'dogru';
-      let durumMesaj = 'Doğru okundu';
+      let durumMesaj = 'Doğru';
       
       if (errorType === 'Mispronunciation' || wScore < 60) {
         durum = 'yanlis';
-        durumMesaj = 'Hatalı telaffuz';
+        durumMesaj = 'Hatalı Telaffuz';
       } else if (errorType === 'Omission') {
         durum = 'atlanmis';
-        durumMesaj = 'Okunmadı / Atlandı';
+        durumMesaj = 'Atlandı / Okunmadı';
       } else if (wScore < 80) {
         durum = 'orta';
         durumMesaj = 'Geliştirilebilir';
       }
 
       return {
-        kelime: w.Word,
-        skor: Math.round(wScore),
+        word: w.Word,
+        accuracyScore: Math.round(wScore),
         durum: durum,
         durumMesaj: durumMesaj
       };
@@ -75,15 +88,15 @@ export default async function handler(req, res) {
     const hataliKelimeler = words.filter(w => w.durum === 'yanlis' || w.durum === 'atlanmis');
 
     return res.status(200).json({
-      genelSkor: Math.round(pa.PronScore || 0),
-      dogruluk: Math.round(pa.AccuracyScore || 0),
-      akicilik: Math.round(pa.FluencyScore || 0),
-      kelimeler: words,
+      pronScore: Math.round(pa.PronScore || 0),
+      accuracyScore: Math.round(pa.AccuracyScore || 0),
+      fluencyScore: Math.round(pa.FluencyScore || 0),
+      words: words,
       hataliKelimeler: hataliKelimeler,
       okunanMetin: nbest.Display || cleanRef
     });
 
   } catch (err) {
-    return res.status(500).json({ error: "Değerlendirme yapılamadı: " + err.message });
+    return res.status(200).json({ error: "Değerlendirme yapılamadı, lütfen tekrar okuyun." });
   }
 }
