@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 const playAzureWord = async (wordText, langCode, forcedGender) => {
     try {
       if (!wordText) return;
-      const hocaCinsiyet = forcedGender || (selectedTutor && selectedTutor.gender) || (activeHoca && activeHoca.gender) || (hoca && hoca.gender) || 'male';
+      const hocaCinsiyet = forcedGender || (typeof t !== "undefined" ? t : null && typeof t !== "undefined" ? t : null.gender) || (typeof t !== "undefined" ? t : null && typeof t !== "undefined" ? t : null.gender) || (hoca && hoca.gender) || 'male';
       const seciliDil = langCode || (selectedLang && selectedLang.code) || 'ar-SA';
       
       const res = await fetch('/api/azure-tts', {
@@ -580,7 +580,7 @@ function Av({h, dil, sz=64}) {
     const res = await fetch("/api/tts", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ text:metin.substring(0,500), voiceId, gender: (selectedTutor && selectedTutor.gender) || (activeHoca && activeHoca.gender) || (hoca && hoca.gender) || "male" })
+      body: JSON.stringify({ text:metin.substring(0,500), voiceId, gender: (typeof t !== "undefined" ? t : null && typeof t !== "undefined" ? t : null.gender) || (typeof t !== "undefined" ? t : null && typeof t !== "undefined" ? t : null.gender) || (hoca && hoca.gender) || "male" })
     });
     if (!res.ok) throw new Error("tts hata");
     const blob = await res.blob();
@@ -1678,7 +1678,7 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
           reader.onloadend = async () => {
             try {
               const base64 = reader.result.split(',')[1];
-              const seciliDil = (selectedLang && selectedLang.mic) || 'ar-SA';
+              const seciliDil = (typeof hedef !== "undefined" && hedef ? hedef.mic : "ar-SA") || 'ar-SA';
 
               const res = await fetch('/api/pronunciation', {
                 method: 'POST',
