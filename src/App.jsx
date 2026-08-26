@@ -1,3 +1,4 @@
+import PronunciationModal from "./PronunciationModal.jsx";
 import { useState, useRef, useEffect } from "react";
 
 // Azure Gerçek Hoca Sesiyle Dinletme
