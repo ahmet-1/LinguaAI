@@ -13,8 +13,9 @@ module.exports = async (req, res) => {
       return res.status(200).json({ error: 'Ses veya referans metin alınamadı.' });
     }
 
-    const key = process.env.AZURE_SPEECH_KEY || process.env.AZURESPEECHKEY || '9ef87b32c66d4001a1db93998f458e0a';
-    const region = process.env.AZURE_SPEECH_REGION || process.env.AZURESPEECHREGION || 'eastus';
+    // Azure Speech Anahtarları (Doğrudan tanımlı)
+    const key = '9ef87b32c66d4001a1db93998f458e0a';
+    const region = 'eastus';
 
     let langCode = language || 'ar-SA';
     if (langCode.includes('ar')) langCode = 'ar-SA';
@@ -73,12 +74,12 @@ module.exports = async (req, res) => {
     });
 
     azureReq.on('error', (e) => {
-      res.status(200).json({ error: 'Azure bağlantı hatası: ' + e.message });
+      return res.status(200).json({ error: 'Azure bağlantı hatası: ' + e.message });
     });
 
     azureReq.write(audioData);
     azureReq.end();
   } catch (err) {
-    res.status(200).json({ error: 'Sunucu hatası: ' + err.message });
+    return res.status(200).json({ error: 'Sunucu hatası: ' + err.message });
   }
 };
