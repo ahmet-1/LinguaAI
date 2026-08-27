@@ -1592,14 +1592,37 @@ function DersEkrani({dilId, hoca, kul, kapat}) {
   // Telaffuz testi - Azure Speech ile
   // 150 saniye üst sınırdır; kullanıcı istediği anda bitirip gönderebilir.
   
-  const encodeWAVData = (samples, sampleRate = 16000) => {
-    const buffer = new ArrayBuffer(44 + samples.length * 2);
-    const view = new DataView(buffer);
-    const writeStr = (offset, str) => {
-      for (let i = 0; i < str.length; i++) {
-        view.setUint8(offset + i, str.charCodeAt(i));
-      }
-    };
+  const handleStartPronTest = (refMsg) => {
+  if (!refMsg) {
+    alert("Henüz hocadan okunacak bir mesaj yok.");
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    alert("Tarayıcınız ses tanımayı desteklemiyor.");
+    return;
+  }
+  const rec = new SR();
+  rec.lang = (hedef && i && i.mic) ? i.mic : "tr-TR";
+  rec.interimResults = false;
+  alert('Hocanın son mesajını okuyun:\n"' + refMsg.substring(0, 50) + '..."');
+  
+  rec.onresult = (ev) => {
+    const spoken = ev.results[0][0].transcript.trim();
+    const rClean = refMsg.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+    const sClean = spoken.toLowerCase().replace(/[.,!?;:()]/g, "").split(/\s+/).filter(Boolean);
+    let ok = 0;
+    rClean.forEach(w => { if (sClean.includes(w)) ok++; });
+    const score = Math.round((ok / Math.max(rClean.length, 1)) * 100);
+    alert("Okunan: " + spoken + "\nTelaffuz Skoru: %" + score);
+  };
+  
+  rec.onerror = (e) => {
+    alert("Ses algılanamadı: " + (e.error || "Tekrar deneyin."));
+  };
+  
+  rec.start();
+};
     writeStr(0, 'RIFF');
     view.setUint32(4, 36 + samples.length * 2, true);
     writeStr(8, 'WAVE');
