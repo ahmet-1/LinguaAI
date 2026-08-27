@@ -1,3 +1,5 @@
+const https = require('https');
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,71 +10,76 @@ module.exports = async (req, res) => {
   try {
     const { audioBase64, referenceText, language } = req.body || {};
     if (!audioBase64 || !referenceText) {
-      return res.status(400).json({ error: 'Ses veya referans metin eksik.' });
+      return res.status(200).json({ error: 'Ses veya referans metin alınamadı.' });
     }
 
-    const key = process.env.AZURE_SPEECH_KEY || process.env.AZURESPEECHKEY;
+    const key = process.env.AZURE_SPEECH_KEY || process.env.AZURESPEECHKEY || '9ef87b32c66d4001a1db93998f458e0a';
     const region = process.env.AZURE_SPEECH_REGION || process.env.AZURESPEECHREGION || 'eastus';
 
-    if (!key) {
-      return res.status(500).json({ error: 'Azure Speech API anahtarı yapılandırılmamış.' });
-    }
-
-    // Dil kodunu Azure standartlarına zorla
     let langCode = language || 'ar-SA';
-    if (langCode === 'ar' || langCode.includes('ar')) langCode = 'ar-SA';
-    if (langCode === 'en' || langCode.includes('en')) langCode = 'en-US';
-    if (langCode === 'tr' || langCode.includes('tr')) langCode = 'tr-TR';
+    if (langCode.includes('ar')) langCode = 'ar-SA';
+    if (langCode.includes('en')) langCode = 'en-US';
+    if (langCode.includes('tr')) langCode = 'tr-TR';
 
-    const audioBuffer = Buffer.from(audioBase64, 'base64');
-
-    const pronAssessmentParams = {
+    const pronParams = JSON.stringify({
       ReferenceText: referenceText,
       GradingSystem: 'HundredMark',
       Granularity: 'Word',
       Dimension: 'Comprehensive'
-    };
-    const pronHeader = Buffer.from(JSON.stringify(pronAssessmentParams)).toString('base64');
+    });
+    const pronHeader = Buffer.from(pronParams).toString('base64');
+    const audioData = Buffer.from(audioBase64, 'base64');
 
-    const endpoint = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${langCode}&format=detailed`;
-
-    const azureRes = await fetch(endpoint, {
+    const options = {
+      hostname: `${region}.stt.speech.microsoft.com`,
+      path: `/speech/recognition/conversation/cognitiveservices/v1?language=${langCode}&format=detailed`,
       method: 'POST',
       headers: {
         'Ocp-Apim-Subscription-Key': key,
         'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
         'Pronunciation-Assessment': pronHeader,
-        'Accept': 'application/json'
-      },
-      body: audioBuffer
-    });
+        'Accept': 'application/json',
+        'Content-Length': audioData.length
+      }
+    };
 
-    const data = await azureRes.json();
-
-    if (data.RecognitionStatus === 'Success' && data.NBest && data.NBest[0]) {
-      const nbest = data.NBest[0];
-      const pa = nbest.PronunciationAssessment || {};
-      const words = (nbest.Words || []).map(w => ({
-        word: w.Word,
-        accuracyScore: (w.PronunciationAssessment && w.PronunciationAssessment.AccuracyScore) || 0,
-        errorType: (w.PronunciationAssessment && w.PronunciationAssessment.ErrorType) || 'None'
-      }));
-
-      return res.status(200).json({
-        pronScore: pa.PronScore || 0,
-        accuracyScore: pa.AccuracyScore || 0,
-        fluencyScore: pa.FluencyScore || 0,
-        completenessScore: pa.CompletenessScore || 0,
-        words: words
+    const azureReq = https.request(options, (azureRes) => {
+      let responseBody = '';
+      azureRes.on('data', (chunk) => { responseBody += chunk; });
+      azureRes.on('end', () => {
+        try {
+          const data = JSON.parse(responseBody);
+          if (data.RecognitionStatus === 'Success' && data.NBest && data.NBest[0]) {
+            const nb = data.NBest[0];
+            const pa = nb.PronunciationAssessment || {};
+            const words = (nb.Words || []).map(w => ({
+              word: w.Word,
+              accuracyScore: (w.PronunciationAssessment && w.PronunciationAssessment.AccuracyScore) || 0
+            }));
+            return res.status(200).json({
+              pronScore: pa.PronScore || 0,
+              accuracyScore: pa.AccuracyScore || 0,
+              fluencyScore: pa.FluencyScore || 0,
+              words: words
+            });
+          }
+          return res.status(200).json({
+            error: 'Ses algılanamadı (' + (data.RecognitionStatus || 'Tekrar deneyin') + '). Lütfen mikrofona yakından okuyun.'
+          });
+        } catch (e) {
+          return res.status(200).json({ error: 'Azure yanıtı işlenemedi: ' + responseBody.slice(0, 50) });
+        }
       });
-    }
-
-    // Eğer Azure sessizlik veya tanıma hatası verdiyse detaylı bilgi dön
-    return res.status(200).json({
-      error: 'Ses algılanamadı (' + (data.RecognitionStatus || 'NoMatch') + '). Lütfen mikrofona konuşup tekrar deneyin.'
     });
+
+    azureReq.on('error', (e) => {
+      return res.status(200).json({ error: 'Azure bağlantı hatası: ' + e.message });
+    });
+
+    azureReq.write(audioData);
+    azureReq.end();
 
   } catch (err) {
-    return res.status(500).json({ error: 'Değerlendirme servisinde hata: ' + err.message });
+    return res.status(200).json({ error: 'Sunucu hatası: ' + err.message });
   }
 };
